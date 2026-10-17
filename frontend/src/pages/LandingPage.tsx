@@ -33,7 +33,7 @@ export const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-agnos-dark text-white selection:bg-agnos-vermilion selection:text-white">
+    <div className="min-h-screen bg-agnos-dark text-white selection:bg-agnos-vermilion selection:text-white w-full max-w-full overflow-x-hidden">
       <Navbar />
 
       {/* HERO SECTION */}

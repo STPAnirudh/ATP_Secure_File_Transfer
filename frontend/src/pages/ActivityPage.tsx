@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { api } from '../services/api';
 import { ActivityLog } from '../types';
 import { formatDateTime } from '../utils/date';
@@ -20,6 +21,17 @@ export const ActivityPage: React.FC = () => {
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const loadActivity = async () => {
     try {
@@ -38,17 +50,26 @@ export const ActivityPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleClearLogs = async () => {
+  const promptClearLogs = () => {
     if (activities.length === 0) return;
-    if (!window.confirm('Clear all network activity logs?')) return;
-    try {
-      await api.clearActivity();
-      setActivities([]);
-      setActionMessage('All activity logs cleared');
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err: any) {
-      alert(`Clear failed: ${err.message}`);
-    }
+    setConfirmState({
+      isOpen: true,
+      title: 'Clear Activity Logs',
+      message: 'Are you sure you want to clear all network activity audit logs? This cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await api.clearActivity();
+          setActivities([]);
+          setActionMessage('All activity logs cleared');
+          setTimeout(() => setActionMessage(null), 3000);
+        } catch (err: any) {
+          setActionMessage(`Clear failed: ${err.message}`);
+          setTimeout(() => setActionMessage(null), 3000);
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   const filtered = activities.filter((act) => {
@@ -108,8 +129,8 @@ export const ActivityPage: React.FC = () => {
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {activities.length > 0 && (
             <button
-              onClick={handleClearLogs}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors"
+              onClick={promptClearLogs}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Clear Logs
@@ -206,6 +227,18 @@ export const ActivityPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Confirm Modal for Clearing Activity Logs */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel="Clear Logs"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </AppShell>
   );
 };

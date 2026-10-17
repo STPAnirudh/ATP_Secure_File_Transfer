@@ -79,105 +79,30 @@ export const Navbar: React.FC = () => {
           </button>
         </div>
 
-        {/* Center / Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
-          {!isApp ? (
-            <>
-              <a href="#features" className="px-3 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">
-                Capabilities
-              </a>
-              <a href="#comparison" className="px-3 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">
-                HTTP vs ATP
-              </a>
-              <a href="#workflow" className="px-3 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">
-                Architecture
-              </a>
-              <Link to="/app/security" className="px-3 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">
-                Cryptography
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/app"
-                className={`px-3 py-1.5 rounded-full transition-colors ${
-                  location.pathname === '/app'
-                    ? 'text-white bg-white/[0.1]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                Overview
-              </Link>
-              <Link
-                to="/app/transfers"
-                className={`px-3 py-1.5 rounded-full transition-colors ${
-                  location.pathname === '/app/transfers'
-                    ? 'text-white bg-white/[0.1]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                Transfers
-              </Link>
-              <Link
-                to="/app/send"
-                className={`px-3 py-1.5 rounded-full transition-colors ${
-                  location.pathname === '/app/send'
-                    ? 'text-white bg-white/[0.1]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                Send File
-              </Link>
-              <Link
-                to="/app/received"
-                className={`px-3 py-1.5 rounded-full transition-colors ${
-                  location.pathname === '/app/received'
-                    ? 'text-white bg-white/[0.1]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                Received Files
-              </Link>
-              <Link
-                to="/app/activity"
-                className={`px-3 py-1.5 rounded-full transition-colors ${
-                  location.pathname === '/app/activity'
-                    ? 'text-white bg-white/[0.1]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                Activity
-              </Link>
-              <Link
-                to="/app/security"
-                className={`px-3 py-1.5 rounded-full transition-colors ${
-                  location.pathname === '/app/security'
-                    ? 'text-white bg-white/[0.1]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                Security
-              </Link>
-              <Link
-                to="/app/settings"
-                className={`px-3 py-1.5 rounded-full transition-colors ${
-                  location.pathname === '/app/settings'
-                    ? 'text-white bg-white/[0.1]'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                Settings
-              </Link>
-            </>
-          )}
-        </nav>
+        {/* Center / Landing Page Navigation Links only (No duplicate links when in app) */}
+        {!isApp && (
+          <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
+            <a href="#features" className="px-3.5 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors whitespace-nowrap">
+              Capabilities
+            </a>
+            <a href="#comparison" className="px-3.5 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors whitespace-nowrap">
+              HTTP vs ATP
+            </a>
+            <a href="#workflow" className="px-3.5 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors whitespace-nowrap">
+              Architecture
+            </a>
+            <Link to="/app/security" className="px-3.5 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors whitespace-nowrap">
+              Cryptography
+            </Link>
+          </nav>
+        )}
 
         {/* Right CTA */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Theme Toggle Button (Light / Dark) */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all hover:scale-105"
+            className="p-2 rounded-full text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all hover:scale-105 cursor-pointer shrink-0"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             aria-label="Toggle Theme"
           >
@@ -191,39 +116,40 @@ export const Navbar: React.FC = () => {
           {/* Connected Devices Trigger Pill */}
           <button
             onClick={() => setShowDevicesModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all cursor-pointer shrink-0"
             title={`Your device: ${deviceName}. Click to manage name and view online peers.`}
           >
             <Smartphone className="w-3.5 h-3.5 text-agnos-vermilion" />
-            <span className="hidden sm:inline max-w-[100px] truncate">{deviceName}</span>
+            <span className="hidden sm:inline max-w-[90px] truncate">{deviceName}</span>
           </button>
 
           {/* Quick Connect / QR Trigger Button */}
           <button
             onClick={() => setShowQrModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] transition-all hover:scale-105 cursor-pointer shrink-0"
             title="Scan QR to connect from other devices on Wi-Fi"
           >
             <QrCode className="w-3.5 h-3.5 text-agnos-vermilion" />
-            <span className="hidden md:inline">Connect</span> Device
+            <span className="hidden sm:inline">Connect</span>
           </button>
 
           {!isApp ? (
             <Link
               to="/app"
-              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover shadow-lg shadow-agnos-vermilion/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover shadow-lg shadow-agnos-vermilion/25 transition-all hover:scale-[1.02] active:scale-[0.98] shrink-0"
             >
-              Open Console
+              <span>Console</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <Link
                 to="/app/send"
-                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover transition-colors shadow-md shadow-agnos-vermilion/20"
+                className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover transition-colors shadow-md shadow-agnos-vermilion/20 shrink-0"
               >
                 <Terminal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">New</span> Transfer
+                <span className="hidden sm:inline">New Transfer</span>
+                <span className="sm:hidden">Send</span>
               </Link>
             </div>
           )}

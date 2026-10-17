@@ -14,6 +14,7 @@ import {
   Edit3,
   Check,
   Wifi,
+  AlertTriangle,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { NetworkQrCard } from '../components/NetworkQrCard';
@@ -42,6 +43,7 @@ export const SettingsPage: React.FC = () => {
     db_path: 'data/atp_transfers.db',
   });
   const [saved, setSaved] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,12 +59,14 @@ export const SettingsPage: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     try {
       await api.updateSettings(settings);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
-      alert(err.message || 'Failed to update settings');
+      setErrorMessage(err.message || 'Failed to update settings');
+      setTimeout(() => setErrorMessage(null), 4000);
     }
   };
 
@@ -89,6 +93,13 @@ export const SettingsPage: React.FC = () => {
             Configure appearance theme, device identity, TCP socket parameters, buffer sizes, and local vault directories.
           </p>
         </div>
+
+        {errorMessage && (
+          <div className="mb-6 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {/* Section: Appearance & Theme Mode */}
         <div className="agnos-card p-6 mb-6 space-y-4">

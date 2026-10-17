@@ -23,6 +23,7 @@ import { AppShell } from '../components/AppShell';
 import { TransferCard } from '../components/TransferCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { NetworkQrCard } from '../components/NetworkQrCard';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { api } from '../services/api';
 import { ServerHealth, Transfer, ActivityLog } from '../types';
 import { useDevice } from '../context/DeviceContext';
@@ -38,6 +39,17 @@ export const OverviewPage: React.FC = () => {
   const [editingName, setEditingName] = useState(false);
   const [customNameInput, setCustomNameInput] = useState(deviceName);
   const [savingName, setSavingName] = useState(false);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const loadData = async () => {
     try {
@@ -76,7 +88,7 @@ export const OverviewPage: React.FC = () => {
       await api.resumeTransfer(id);
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      console.error(err);
     }
   };
 
@@ -85,17 +97,27 @@ export const OverviewPage: React.FC = () => {
       await api.retryTransfer(id);
       loadData();
     } catch (err: any) {
-      alert(err.message);
+      console.error(err);
     }
   };
 
-  const handleDeleteTransfer = async (id: string) => {
-    try {
-      await api.deleteTransfer(id);
-      loadData();
-    } catch (err: any) {
-      alert(err.message);
-    }
+  const promptDeleteTransfer = (id: string) => {
+    const target = transfers.find((t) => t.id === id);
+    setConfirmState({
+      isOpen: true,
+      title: 'Delete Transfer Record',
+      message: `Delete transfer record for "${target?.file_name || id.slice(0, 8)}"? This removes its chunk checkpoints from history.`,
+      onConfirm: async () => {
+        try {
+          await api.deleteTransfer(id);
+          loadData();
+        } catch (err: any) {
+          console.error(err);
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   const formatBytes = (bytes: number) => {
@@ -255,7 +277,7 @@ export const OverviewPage: React.FC = () => {
                   transfer={t}
                   onResume={handleResume}
                   onRetry={handleRetry}
-                  onDelete={handleDeleteTransfer}
+                  onDelete={promptDeleteTransfer}
                 />
               ))}
             </div>
@@ -280,7 +302,7 @@ export const OverviewPage: React.FC = () => {
                   <TransferCard
                     key={t.id}
                     transfer={t}
-                    onDelete={handleDeleteTransfer}
+                    onDelete={promptDeleteTransfer}
                   />
                 ))}
               </div>
@@ -409,6 +431,18 @@ export const OverviewPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Floating Confirm Modal for Deleting Transfers */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </AppShell>
   );
 };

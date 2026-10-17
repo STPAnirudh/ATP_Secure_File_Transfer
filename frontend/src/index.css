@@ -84,27 +84,74 @@ html.light .bg-agnos-dark {
 
 html.light .agnos-card {
   background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06) !important;
 }
 
 html.light .agnos-card-hover:hover {
   border-color: rgba(255, 99, 33, 0.5) !important;
-  box-shadow: 0 12px 28px -8px rgba(255, 99, 33, 0.12) !important;
+  box-shadow: 0 12px 28px -8px rgba(255, 99, 33, 0.15) !important;
+}
+
+/* Modals: 100% Solid Opaque Floating Dialogs */
+html.light .modal-box {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+}
+
+html.light .modal-heading {
+  color: #0f172a !important;
+}
+
+html.light .modal-subtext {
+  color: #475569 !important;
+}
+
+html.light .modal-divider {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .modal-cancel-btn {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light .modal-cancel-btn:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html.light .device-current-box {
+  background-color: #fff7ed !important;
+  border-color: #fed7aa !important;
+}
+
+html.light .device-item-row {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .device-item-empty {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #475569 !important;
 }
 
 /* Navbar & AppShell Light adjustments */
 html.light header {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-bottom-color: #e2e8f0 !important;
 }
 
 html.light footer {
   background-color: #ffffff !important;
-  border-top-color: rgba(0, 0, 0, 0.08) !important;
+  border-top-color: #e2e8f0 !important;
 }
 
-/* Headings and primary text in light mode */
+/* High contrast typography in light mode */
 html.light h1,
 html.light h2,
 html.light h3,
@@ -112,30 +159,48 @@ html.light h4 {
   color: #0f172a !important;
 }
 
-html.light .text-zinc-400 {
-  color: #64748b !important;
+html.light .text-white {
+  color: #0f172a;
+}
+
+html.light .text-zinc-100,
+html.light .text-zinc-200 {
+  color: #0f172a !important;
 }
 
 html.light .text-zinc-300 {
-  color: #334155 !important;
-}
-
-html.light .text-zinc-500 {
-  color: #94a3b8 !important;
-}
-
-html.light .text-zinc-200 {
   color: #1e293b !important;
 }
 
-/* Generic borders and glass panels in light mode */
+html.light .text-zinc-400 {
+  color: #475569 !important;
+}
+
+html.light .text-zinc-500 {
+  color: #64748b !important;
+}
+
+/* Accent badges and buttons retain pristine white text */
+html.light .bg-agnos-vermilion,
+html.light .bg-agnos-vermilion *,
+html.light .bg-emerald-500,
+html.light .bg-emerald-500 *,
+html.light .bg-rose-500,
+html.light .bg-rose-500 *,
+html.light .bg-amber-500,
+html.light .bg-amber-500 * {
+  color: #ffffff !important;
+}
+
+/* Generic borders and cards in light mode */
 html.light .border-white\/\[0\.04\],
 html.light .border-white\/\[0\.06\],
 html.light .border-white\/\[0\.08\],
 html.light .border-white\/\[0\.1\],
 html.light .border-white\/\[0\.12\],
-html.light .border-white\/\[0\.15\] {
-  border-color: rgba(0, 0, 0, 0.08) !important;
+html.light .border-white\/\[0\.15\],
+html.light .border-white\/20 {
+  border-color: #e2e8f0 !important;
 }
 
 html.light .bg-white\/\[0\.01\],
@@ -143,16 +208,18 @@ html.light .bg-white\/\[0\.02\],
 html.light .bg-white\/\[0\.03\],
 html.light .bg-white\/\[0\.04\],
 html.light .bg-white\/\[0\.05\],
-html.light .bg-white\/\[0\.08\] {
-  background-color: rgba(15, 23, 42, 0.03) !important;
+html.light .bg-white\/\[0\.06\],
+html.light .bg-white\/\[0\.08\],
+html.light .bg-white\/\[0\.1\] {
+  background-color: #f1f5f9 !important;
 }
 
 /* Code, terminal blocks, and inputs */
 html.light .bg-black\/40,
 html.light .bg-black\/50,
 html.light .bg-black\/60 {
-  background-color: #f1f5f9 !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
 
@@ -161,23 +228,9 @@ html.light select,
 html.light textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: rgba(0, 0, 0, 0.15) !important;
+  border-color: #cbd5e1 !important;
 }
 
 html.light input::placeholder {
   color: #94a3b8 !important;
-}
-
-/* Keep accent buttons text crisp white */
-html.light .bg-agnos-vermilion,
-html.light .bg-emerald-500,
-html.light .bg-rose-500,
-html.light .bg-amber-500 {
-  color: #ffffff !important;
-}
-
-html.light .bg-agnos-vermilion span,
-html.light .bg-emerald-500 span,
-html.light .bg-rose-500 span {
-  color: #ffffff !important;
 }

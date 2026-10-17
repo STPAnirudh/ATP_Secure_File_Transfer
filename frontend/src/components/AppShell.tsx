@@ -28,7 +28,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-agnos-dark flex flex-col text-white">
+    <div className="min-h-screen bg-agnos-dark flex flex-col text-white w-full max-w-full overflow-x-hidden">
       <Navbar />
 
       {/* App Subnavigation Bar */}
@@ -37,13 +37,17 @@ export const AppShell: React.FC<Props> = ({ children }) => {
           <div className="flex items-center gap-2 overflow-x-auto py-3 no-scrollbar">
             {navItems.map((item) => {
               const Icon = item.icon;
+              const isSettings = item.to === '/app/settings';
               return (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   end={item.exact}
+                  title={item.label}
                   className={({ isActive }) =>
-                    `flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                    `flex items-center gap-2 ${
+                      isSettings ? 'px-3 py-1.5' : 'px-3.5 py-1.5'
+                    } rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                       isActive
                         ? 'bg-agnos-vermilion text-white shadow-md shadow-agnos-vermilion/20'
                         : 'text-zinc-400 hover:text-white hover:bg-white/[0.05]'
@@ -51,7 +55,7 @@ export const AppShell: React.FC<Props> = ({ children }) => {
                   }
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span>{item.label}</span>
+                  {!isSettings && <span>{item.label}</span>}
                 </NavLink>
               );
             })}

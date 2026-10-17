@@ -12,6 +12,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { api } from '../services/api';
 import { ReceivedFile } from '../types';
 import { useDevice } from '../context/DeviceContext';
@@ -22,6 +23,17 @@ export const ReceivedPage: React.FC = () => {
   const [files, setFiles] = useState<ReceivedFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const loadFiles = async () => {
     try {
@@ -38,33 +50,47 @@ export const ReceivedPage: React.FC = () => {
     loadFiles();
   }, [deviceId]);
 
-  const handleDeleteFile = async (fileName: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${fileName}" from the vault?`)) {
-      return;
-    }
-    try {
-      await api.deleteReceivedFile(fileName);
-      setFiles((prev) => prev.filter((f) => f.name !== fileName));
-      setActionMessage(`Deleted "${fileName}"`);
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err: any) {
-      alert(`Failed to delete: ${err.message}`);
-    }
+  const promptDeleteFile = (fileName: string) => {
+    setConfirmState({
+      isOpen: true,
+      title: 'Delete Received File',
+      message: `Are you sure you want to permanently delete "${fileName}" from the vault? This will also remove its corresponding records from transfer history.`,
+      onConfirm: async () => {
+        try {
+          await api.deleteReceivedFile(fileName);
+          setFiles((prev) => prev.filter((f) => f.name !== fileName));
+          setActionMessage(`Deleted "${fileName}" and synced transfer history`);
+          setTimeout(() => setActionMessage(null), 3000);
+        } catch (err: any) {
+          setActionMessage(`Failed to delete: ${err.message}`);
+          setTimeout(() => setActionMessage(null), 3000);
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
-  const handleClearAll = async () => {
+  const promptClearAll = () => {
     if (files.length === 0) return;
-    if (!window.confirm('Delete all received files from the vault? This cannot be undone.')) {
-      return;
-    }
-    try {
-      await api.clearAllReceivedFiles();
-      setFiles([]);
-      setActionMessage('All vault files cleared successfully');
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err: any) {
-      alert(`Failed to clear: ${err.message}`);
-    }
+    setConfirmState({
+      isOpen: true,
+      title: 'Clear Entire Vault',
+      message: 'Are you sure you want to delete all received files from the vault and clear their transfer records? This cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await api.clearAllReceivedFiles();
+          setFiles([]);
+          setActionMessage('All vault files and transfer records cleared successfully');
+          setTimeout(() => setActionMessage(null), 3000);
+        } catch (err: any) {
+          setActionMessage(`Failed to clear: ${err.message}`);
+          setTimeout(() => setActionMessage(null), 3000);
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   const formatBytes = (bytes: number) => {
@@ -94,8 +120,8 @@ export const ReceivedPage: React.FC = () => {
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {files.length > 0 && (
             <button
-              onClick={handleClearAll}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors"
+              onClick={promptClearAll}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Clear Vault
@@ -187,8 +213,8 @@ export const ReceivedPage: React.FC = () => {
                     Download File
                   </a>
                   <button
-                    onClick={() => handleDeleteFile(file.name)}
-                    className="p-2 rounded-full text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors"
+                    onClick={() => promptDeleteFile(file.name)}
+                    className="p-2 rounded-full text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-colors cursor-pointer"
                     title="Delete this file"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -208,6 +234,18 @@ export const ReceivedPage: React.FC = () => {
           File requests are sanitised through absolute path canonicalization and restricted solely to the designated <code className="text-zinc-200">data/received/</code> vault directory. Directory traversal attempts (e.g. <code className="text-zinc-400">../</code>) are detected and blocked.
         </div>
       </div>
+
+      {/* Floating Confirm Modal for Deleting Files */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </AppShell>
   );
 };

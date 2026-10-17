@@ -79,11 +79,11 @@ export const NetworkQrModal: React.FC<NetworkQrModalProps> = ({ isOpen, onClose 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-agnos-dark border border-white/[0.1] rounded-2xl p-6 shadow-2xl shadow-black/80 text-center">
+      <div className="relative w-full max-w-md bg-[#141428] border border-white/[0.1] rounded-2xl p-6 shadow-2xl modal-box text-center">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-white/[0.08] transition-colors"
+          className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white rounded-lg hover:bg-white/[0.08] transition-colors cursor-pointer"
           title="Close"
         >
           <X className="w-4 h-4" />
@@ -94,9 +94,9 @@ export const NetworkQrModal: React.FC<NetworkQrModalProps> = ({ isOpen, onClose 
           <div className="w-8 h-8 rounded-lg bg-agnos-vermilion/20 border border-agnos-vermilion/40 flex items-center justify-center text-agnos-vermilion">
             <Smartphone className="w-4 h-4" />
           </div>
-          <h2 className="text-lg font-bold text-white tracking-tight">Connect Another Device</h2>
+          <h2 className="text-lg font-bold modal-heading tracking-tight">Connect Another Device</h2>
         </div>
-        <p className="text-xs text-zinc-400 mb-6">
+        <p className="text-xs text-zinc-400 modal-subtext mb-6">
           Scan the QR code to open the ATP dashboard on your mobile phone or laptop.
         </p>
 
@@ -117,7 +117,7 @@ export const NetworkQrModal: React.FC<NetworkQrModalProps> = ({ isOpen, onClose 
 
         {/* Address in Text Right Under QR */}
         <div className="mt-5 flex flex-col items-center">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 mb-1.5">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 modal-subtext flex items-center gap-1.5 mb-1.5">
             <Wifi className="w-3.5 h-3.5 text-agnos-vermilion" />
             Local Network Address
           </span>
@@ -130,7 +130,7 @@ export const NetworkQrModal: React.FC<NetworkQrModalProps> = ({ isOpen, onClose 
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/[0.08] hover:bg-agnos-vermilion text-white transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white/[0.08] hover:bg-agnos-vermilion text-white transition-colors cursor-pointer"
                 title="Copy Address"
               >
                 {copied ? (
@@ -158,22 +158,22 @@ export const NetworkQrModal: React.FC<NetworkQrModalProps> = ({ isOpen, onClose 
             </div>
           </div>
 
-          <p className="text-[11px] text-zinc-500 mt-3 max-w-xs leading-relaxed">
+          <p className="text-[11px] text-zinc-400 modal-subtext mt-3 max-w-xs leading-relaxed">
             Ensure both devices are on the same Wi-Fi or Local Area Network (LAN). TCP Engine listens on port {networkInfo?.tcp_port || 9000}.
           </p>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-white/[0.08] flex items-center justify-between">
+        <div className="mt-6 pt-4 border-t border-white/[0.08] modal-divider flex items-center justify-between">
           <button
             onClick={fetchNetwork}
-            className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh IP
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/[0.08] hover:bg-white/[0.15] text-zinc-200 transition-colors"
+            className="px-4 py-1.5 rounded-full text-xs font-semibold bg-white/[0.08] hover:bg-white/[0.15] text-white modal-cancel-btn transition-colors cursor-pointer"
           >
             Done
           </button>

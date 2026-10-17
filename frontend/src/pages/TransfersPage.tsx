@@ -21,6 +21,7 @@ import {
 import { AppShell } from '../components/AppShell';
 import { TransferCard } from '../components/TransferCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { api } from '../services/api';
 import { Transfer, TransferDetail } from '../types';
 import { useDevice } from '../context/DeviceContext';
@@ -35,6 +36,17 @@ export const TransfersPage: React.FC = () => {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   const loadTransfers = async () => {
     try {
@@ -68,7 +80,8 @@ export const TransfersPage: React.FC = () => {
       await api.resumeTransfer(id);
       loadTransfers();
     } catch (err: any) {
-      alert(err.message);
+      setActionMessage(`Resume failed: ${err.message}`);
+      setTimeout(() => setActionMessage(null), 3000);
     }
   };
 
@@ -77,35 +90,55 @@ export const TransfersPage: React.FC = () => {
       await api.retryTransfer(id);
       loadTransfers();
     } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const handleDeleteTransfer = async (id: string) => {
-    if (!window.confirm('Delete this transfer log from history?')) return;
-    try {
-      await api.deleteTransfer(id);
-      setTransfers((prev) => prev.filter((t) => t.id !== id));
-      if (selectedTransfer?.id === id) setSelectedTransfer(null);
-      setActionMessage('Transfer record deleted');
+      setActionMessage(`Retry failed: ${err.message}`);
       setTimeout(() => setActionMessage(null), 3000);
-    } catch (err: any) {
-      alert(`Delete failed: ${err.message}`);
     }
   };
 
-  const handleClearAll = async () => {
+  const promptDeleteTransfer = (id: string) => {
+    const target = transfers.find((t) => t.id === id);
+    setConfirmState({
+      isOpen: true,
+      title: 'Delete Transfer Record',
+      message: `Are you sure you want to delete the transfer record for "${target?.file_name || id.slice(0, 8)}"? All associated chunk checkpoints will be removed from history.`,
+      onConfirm: async () => {
+        try {
+          await api.deleteTransfer(id);
+          setTransfers((prev) => prev.filter((t) => t.id !== id));
+          if (selectedTransfer?.id === id) setSelectedTransfer(null);
+          setActionMessage('Transfer record deleted');
+          setTimeout(() => setActionMessage(null), 3000);
+        } catch (err: any) {
+          setActionMessage(`Delete failed: ${err.message}`);
+          setTimeout(() => setActionMessage(null), 3000);
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
+  };
+
+  const promptClearAll = () => {
     if (transfers.length === 0) return;
-    if (!window.confirm('Clear all transfer records from history?')) return;
-    try {
-      await api.clearAllTransfers();
-      setTransfers([]);
-      setSelectedTransfer(null);
-      setActionMessage('All transfer records cleared');
-      setTimeout(() => setActionMessage(null), 3000);
-    } catch (err: any) {
-      alert(`Failed to clear: ${err.message}`);
-    }
+    setConfirmState({
+      isOpen: true,
+      title: 'Clear Transfer History',
+      message: 'Are you sure you want to clear all transfer records and chunk checkpoints from history? This cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await api.clearAllTransfers();
+          setTransfers([]);
+          setSelectedTransfer(null);
+          setActionMessage('All transfer records cleared');
+          setTimeout(() => setActionMessage(null), 3000);
+        } catch (err: any) {
+          setActionMessage(`Failed to clear: ${err.message}`);
+          setTimeout(() => setActionMessage(null), 3000);
+        } finally {
+          setConfirmState((prev) => ({ ...prev, isOpen: false }));
+        }
+      },
+    });
   };
 
   const filteredTransfers = transfers.filter((t) => {
@@ -147,8 +180,8 @@ export const TransfersPage: React.FC = () => {
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {transfers.length > 0 && (
             <button
-              onClick={handleClearAll}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors"
+              onClick={promptClearAll}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Clear History
@@ -230,7 +263,7 @@ export const TransfersPage: React.FC = () => {
               onResume={handleResume}
               onRetry={handleRetry}
               onSelect={handleSelectTransfer}
-              onDelete={handleDeleteTransfer}
+              onDelete={promptDeleteTransfer}
             />
           ))}
         </div>
@@ -238,11 +271,11 @@ export const TransfersPage: React.FC = () => {
 
       {/* Transfer Detail Inspection Modal */}
       {selectedTransfer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-2xl agnos-card p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-2xl border border-white/[0.1]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-2xl bg-[#141428] text-white rounded-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-2xl border border-white/[0.1] modal-box">
             <button
               onClick={() => setSelectedTransfer(null)}
-              className="absolute top-5 right-5 p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/[0.1] transition-colors"
+              className="absolute top-5 right-5 p-1 rounded-full text-zinc-400 hover:text-white transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -252,43 +285,43 @@ export const TransfersPage: React.FC = () => {
               <StatusBadge status={selectedTransfer.status} />
             </div>
 
-            <h2 className="text-xl font-bold text-white mb-1 break-all">
+            <h2 className="text-xl font-bold modal-heading mb-1 break-all">
               {selectedTransfer.file_name}
             </h2>
-            <div className="text-xs font-mono text-zinc-400 mb-6">
+            <div className="text-xs font-mono text-zinc-400 modal-subtext mb-6">
               ID: {selectedTransfer.id}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] mb-6 font-mono text-xs">
               <div>
-                <span className="text-zinc-500 text-[11px] block">Total Size</span>
-                <span className="text-zinc-200 font-semibold">{formatBytes(selectedTransfer.file_size)}</span>
+                <span className="text-zinc-400 modal-subtext text-[11px] block">Total Size</span>
+                <span className="modal-heading font-semibold">{formatBytes(selectedTransfer.file_size)}</span>
               </div>
               <div>
-                <span className="text-zinc-500 text-[11px] block">Transferred</span>
-                <span className="text-zinc-200 font-semibold">{formatBytes(selectedTransfer.transferred_bytes)}</span>
+                <span className="text-zinc-400 modal-subtext text-[11px] block">Transferred</span>
+                <span className="modal-heading font-semibold">{formatBytes(selectedTransfer.transferred_bytes)}</span>
               </div>
               <div>
-                <span className="text-zinc-500 text-[11px] block">Chunks</span>
-                <span className="text-zinc-200 font-semibold">{selectedTransfer.completed_chunks} / {selectedTransfer.total_chunks}</span>
+                <span className="text-zinc-400 modal-subtext text-[11px] block">Chunks</span>
+                <span className="modal-heading font-semibold">{selectedTransfer.completed_chunks} / {selectedTransfer.total_chunks}</span>
               </div>
               <div>
-                <span className="text-zinc-500 text-[11px] block">Direction</span>
-                <span className="text-zinc-200 uppercase">{selectedTransfer.direction}</span>
+                <span className="text-zinc-400 modal-subtext text-[11px] block">Direction</span>
+                <span className="modal-heading uppercase">{selectedTransfer.direction}</span>
               </div>
               <div>
-                <span className="text-zinc-500 text-[11px] block">Date & Time</span>
-                <span className="text-zinc-200">{formatDateTime(selectedTransfer.created_at)}</span>
+                <span className="text-zinc-400 modal-subtext text-[11px] block">Date & Time</span>
+                <span className="modal-heading">{formatDateTime(selectedTransfer.created_at)}</span>
               </div>
               <div>
-                <span className="text-zinc-500 text-[11px] block">Target</span>
-                <span className="text-zinc-200">{selectedTransfer.target_device_id || 'broadcast'}</span>
+                <span className="text-zinc-400 modal-subtext text-[11px] block">Target</span>
+                <span className="modal-heading">{selectedTransfer.target_device_id || 'broadcast'}</span>
               </div>
             </div>
 
             {/* SHA-256 Digest */}
             <div className="mb-6">
-              <div className="text-xs font-semibold text-zinc-300 mb-1 flex items-center gap-1.5">
+              <div className="text-xs font-semibold modal-heading mb-1 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 <span>End-to-End SHA-256 Checksum</span>
               </div>
@@ -299,14 +332,14 @@ export const TransfersPage: React.FC = () => {
 
             {/* Chunks Checklist */}
             <div className="mb-6">
-              <div className="flex items-center justify-between text-xs font-semibold text-zinc-300 mb-2">
+              <div className="flex items-center justify-between text-xs font-semibold modal-heading mb-2">
                 <span>Checkpoint Chunk Verification ({selectedTransfer.chunks?.length || 0} chunks logged)</span>
-                <span className="font-mono text-zinc-500 text-[11px]">64 KB atomic segments</span>
+                <span className="font-mono text-zinc-400 modal-subtext text-[11px]">64 KB atomic segments</span>
               </div>
 
               <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl bg-black/30 p-2 border border-white/[0.04]">
                 {(!selectedTransfer.chunks || selectedTransfer.chunks.length === 0) ? (
-                  <div className="text-center py-6 text-xs text-zinc-500">
+                  <div className="text-center py-6 text-xs text-zinc-400 modal-subtext">
                     No individual chunk records logged for this transfer.
                   </div>
                 ) : (
@@ -318,7 +351,7 @@ export const TransfersPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         <span className="text-zinc-300">Chunk #{c.chunk_index}</span>
-                        <span className="text-zinc-500">Offset: {c.byte_offset} B</span>
+                        <span className="text-zinc-400 modal-subtext">Offset: {c.byte_offset} B</span>
                       </div>
                       <span className="text-emerald-400 text-[10px]">VERIFIED (AEAD)</span>
                     </div>
@@ -328,10 +361,10 @@ export const TransfersPage: React.FC = () => {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-white/[0.08]">
+            <div className="flex items-center justify-between pt-4 border-t border-white/[0.08] modal-divider">
               <button
-                onClick={() => handleDeleteTransfer(selectedTransfer.id)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
+                onClick={() => promptDeleteTransfer(selectedTransfer.id)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 Delete Record
@@ -339,7 +372,7 @@ export const TransfersPage: React.FC = () => {
 
               <button
                 onClick={() => setSelectedTransfer(null)}
-                className="px-5 py-2 rounded-full text-xs font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white transition-colors"
+                className="px-5 py-2 rounded-full text-xs font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white modal-cancel-btn transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -347,6 +380,18 @@ export const TransfersPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Confirm Modal for Deleting Transfers */}
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </AppShell>
   );
 };

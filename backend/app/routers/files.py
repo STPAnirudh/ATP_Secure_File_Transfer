@@ -107,23 +107,48 @@ def delete_received_file(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete file: {e}")
 
-    log_activity(None, "FILE_DELETED", f"Received vault file {clean_name} deleted by user", "info")
-    return {"status": "ok", "message": f"File {clean_name} deleted successfully"}
+    # Cascade deletion to transfer history in SQLite
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM transfers WHERE file_name = ?", (clean_name,))
+    matching = cursor.fetchall()
+    for row in matching:
+        cursor.execute("DELETE FROM transfer_chunks WHERE transfer_id = ?", (row["id"],))
+    cursor.execute("DELETE FROM transfers WHERE file_name = ?", (clean_name,))
+    conn.commit()
+    conn.close()
+
+    log_activity(None, "FILE_DELETED", f"Received vault file {clean_name} and transfer history deleted", "info")
+    return {"status": "ok", "message": f"File {clean_name} and related transfer history deleted successfully"}
 
 @router.delete("")
 def clear_all_received_files():
     """
-    Clears all files from the received vault.
+    Clears all files from the received vault and cascades deletion to completed transfers.
     """
     deleted_count = 0
+    deleted_names = []
     if RECEIVED_DIR.exists():
         for item in RECEIVED_DIR.iterdir():
             if item.is_file() and not item.name.startswith("."):
                 try:
+                    deleted_names.append(item.name)
                     item.unlink()
                     deleted_count += 1
                 except Exception:
                     pass
 
-    log_activity(None, "VAULT_CLEARED", f"All files ({deleted_count}) removed from received vault", "info")
-    return {"status": "ok", "message": f"Cleared {deleted_count} files from vault"}
+    # Cascade delete to completed transfers for these files
+    if deleted_names:
+        conn = get_db()
+        cursor = conn.cursor()
+        for fname in deleted_names:
+            cursor.execute("SELECT id FROM transfers WHERE file_name = ?", (fname,))
+            for row in cursor.fetchall():
+                cursor.execute("DELETE FROM transfer_chunks WHERE transfer_id = ?", (row["id"],))
+            cursor.execute("DELETE FROM transfers WHERE file_name = ?", (fname,))
+        conn.commit()
+        conn.close()
+
+    log_activity(None, "VAULT_CLEARED", f"All files ({deleted_count}) removed from received vault and history", "info")
+    return {"status": "ok", "message": f"Cleared {deleted_count} files from vault and history"}
