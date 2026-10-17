@@ -12,13 +12,27 @@ from backend.app.tcp_engine.storage import StorageManager
 router = APIRouter(prefix="/transfers", tags=["transfers"])
 
 @router.get("")
-def list_transfers(status: Optional[str] = None):
+def list_transfers(status: Optional[str] = None, device_id: Optional[str] = None):
+    """
+    Lists transfers. If device_id is provided, only shows transfers
+    addressed to 'broadcast' OR matching the target/sender device ID.
+    """
     conn = get_db()
     cursor = conn.cursor()
-    if status:
-        cursor.execute("SELECT * FROM transfers WHERE status = ? ORDER BY created_at DESC", (status,))
-    else:
-        cursor.execute("SELECT * FROM transfers ORDER BY created_at DESC")
+
+    query = "SELECT * FROM transfers WHERE 1=1"
+    params = []
+
+    if status and status != "all":
+        query += " AND status = ?"
+        params.append(status)
+
+    if device_id:
+        query += " AND (target_device_id = 'broadcast' OR target_device_id = ? OR sender_device_id = ?)"
+        params.extend([device_id, device_id])
+
+    query += " ORDER BY created_at DESC"
+    cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -44,10 +58,42 @@ def get_transfer_detail(transfer_id: str):
     result["chunks"] = [dict(c) for c in chunks]
     return result
 
+@router.delete("/{transfer_id}")
+def delete_transfer(transfer_id: str):
+    """
+    Deletes an individual transfer record and associated checkpoint chunks from the database.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM transfer_chunks WHERE transfer_id = ?", (transfer_id,))
+    cursor.execute("DELETE FROM transfers WHERE id = ?", (transfer_id,))
+    conn.commit()
+    conn.close()
+
+    log_activity(transfer_id, "TRANSFER_DELETED", f"Transfer record {transfer_id} removed by user", "info")
+    return {"status": "ok", "message": f"Transfer {transfer_id} removed"}
+
+@router.delete("")
+def clear_all_transfers():
+    """
+    Clears all transfer history and chunks.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM transfer_chunks")
+    cursor.execute("DELETE FROM transfers")
+    conn.commit()
+    conn.close()
+
+    log_activity(None, "TRANSFERS_CLEARED", "All transfer history records cleared by user", "info")
+    return {"status": "ok", "message": "All transfer records cleared"}
+
 @router.post("/send-client")
 async def send_file_via_tcp(
     file: UploadFile = File(...),
-    simulate_drop_after_chunks: Optional[int] = Form(None)
+    simulate_drop_after_chunks: Optional[int] = Form(None),
+    target_device_id: Optional[str] = Form("broadcast"),
+    sender_device_id: Optional[str] = Form("anonymous")
 ):
     """
     Saves uploaded file to temp staging and triggers the real TCP client
@@ -60,7 +106,6 @@ async def send_file_via_tcp(
     clean_filename = os.path.basename(file.filename or "uploaded_file.bin")
     staged_path = staging_dir / clean_filename
 
-    # Write file asynchronously to avoid event loop blocking
     def _save_file():
         with open(staged_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -74,6 +119,19 @@ async def send_file_via_tcp(
             filepath=str(staged_path),
             simulate_drop_after_chunks=simulate_drop_after_chunks
         )
+
+        # Update target_device_id and sender_device_id in transfers table
+        transfer_id = result.get("transfer_id")
+        if transfer_id:
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE transfers SET target_device_id = ?, sender_device_id = ? WHERE id = ?",
+                (target_device_id or "broadcast", sender_device_id or "anonymous", transfer_id)
+            )
+            conn.commit()
+            conn.close()
+
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TCP Transmission Error: {str(e)}")
@@ -93,7 +151,6 @@ async def resume_transfer(transfer_id: str):
     if not transfer:
         raise HTTPException(status_code=404, detail="Transfer not found")
 
-    # Locate source file in staging
     staging_dir = DATA_DIR / "staging"
     staged_path = staging_dir / transfer["file_name"]
 

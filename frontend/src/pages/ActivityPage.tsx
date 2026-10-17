@@ -6,17 +6,20 @@ import {
   Info,
   XCircle,
   RefreshCw,
-  Clock,
   Terminal,
+  Trash2,
+  AlertCircle,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { api } from '../services/api';
 import { ActivityLog } from '../types';
+import { formatDateTime } from '../utils/date';
 
 export const ActivityPage: React.FC = () => {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const loadActivity = async () => {
     try {
@@ -34,6 +37,19 @@ export const ActivityPage: React.FC = () => {
     const interval = setInterval(loadActivity, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleClearLogs = async () => {
+    if (activities.length === 0) return;
+    if (!window.confirm('Clear all network activity logs?')) return;
+    try {
+      await api.clearActivity();
+      setActivities([]);
+      setActionMessage('All activity logs cleared');
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err: any) {
+      alert(`Clear failed: ${err.message}`);
+    }
+  };
 
   const filtered = activities.filter((act) => {
     if (filter === 'all') return true;
@@ -63,10 +79,9 @@ export const ActivityPage: React.FC = () => {
             ERROR
           </span>
         );
-      case 'info':
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
             <Info className="w-3 h-3" />
             INFO
           </span>
@@ -90,17 +105,36 @@ export const ActivityPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setLoading(true);
-            loadActivity();
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-zinc-300 border border-white/[0.08] transition-colors self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Audit
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {activities.length > 0 && (
+            <button
+              onClick={handleClearLogs}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear Logs
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              setLoading(true);
+              loadActivity();
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-zinc-300 border border-white/[0.08] transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Audit
+          </button>
+        </div>
       </div>
+
+      {actionMessage && (
+        <div className="mb-6 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          <span>{actionMessage}</span>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar">
@@ -108,8 +142,8 @@ export const ActivityPage: React.FC = () => {
           { id: 'all', label: 'All Events' },
           { id: 'info', label: 'Info' },
           { id: 'success', label: 'Success & Verified' },
-          { id: 'warning', label: 'Warnings & Interrupted' },
-          { id: 'error', label: 'Errors & Tampering' },
+          { id: 'warning', label: 'Warnings' },
+          { id: 'error', label: 'Errors & Violations' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -125,7 +159,7 @@ export const ActivityPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Audit Log Table */}
+      {/* Table */}
       {filtered.length === 0 ? (
         <div className="agnos-card p-12 text-center">
           <Terminal className="w-8 h-8 text-zinc-500 mx-auto mb-3" />
@@ -140,7 +174,7 @@ export const ActivityPage: React.FC = () => {
             <table className="w-full text-left text-xs font-mono">
               <thead className="bg-white/[0.03] border-b border-white/[0.06] text-zinc-400">
                 <tr>
-                  <th className="py-3 px-4">Timestamp</th>
+                  <th className="py-3 px-4">Date & Time</th>
                   <th className="py-3 px-4">Severity</th>
                   <th className="py-3 px-4">Event Type</th>
                   <th className="py-3 px-4">Transfer Ref</th>
@@ -150,8 +184,8 @@ export const ActivityPage: React.FC = () => {
               <tbody className="divide-y divide-white/[0.04]">
                 {filtered.map((act) => (
                   <tr key={act.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3 px-4 text-zinc-500 whitespace-nowrap">
-                      {new Date(act.timestamp).toLocaleTimeString()}
+                    <td className="py-3 px-4 text-zinc-400 whitespace-nowrap">
+                      {formatDateTime(act.timestamp)}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       {getSeverityBadge(act.severity)}

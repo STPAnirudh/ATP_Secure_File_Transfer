@@ -13,7 +13,6 @@ def get_db():
     return conn
 
 def hash_password(password: str) -> str:
-    # SHA-256 with salt for administrative credentials
     salt = "atp_salt_2026_"
     return hashlib.sha256((salt + password).encode()).hexdigest()
 
@@ -47,11 +46,21 @@ def init_db():
         client_ip TEXT,
         session_key_fingerprint TEXT,
         error_message TEXT,
+        target_device_id TEXT DEFAULT 'broadcast',
+        sender_device_id TEXT DEFAULT 'anonymous',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
     
+    # Ensure newly added columns exist in existing database files
+    cursor.execute("PRAGMA table_info(transfers)")
+    transfer_columns = [col[1] for col in cursor.fetchall()]
+    if "target_device_id" not in transfer_columns:
+        cursor.execute("ALTER TABLE transfers ADD COLUMN target_device_id TEXT DEFAULT 'broadcast'")
+    if "sender_device_id" not in transfer_columns:
+        cursor.execute("ALTER TABLE transfers ADD COLUMN sender_device_id TEXT DEFAULT 'anonymous'")
+
     # 3. Transfer Checkpoints / Chunks table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS transfer_chunks (
@@ -93,10 +102,23 @@ def init_db():
     )
     """)
 
+    # 6. Connected Devices table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS connected_devices (
+        device_id TEXT PRIMARY KEY,
+        device_name TEXT NOT NULL,
+        device_type TEXT NOT NULL DEFAULT 'desktop',
+        client_ip TEXT NOT NULL,
+        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     # Indices for performance and concurrency
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_tid ON transfer_chunks(transfer_id, chunk_index)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_transfers_status ON transfers(status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_transfers_updated ON transfers(updated_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_transfers_target ON transfers(target_device_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_devices_seen ON connected_devices(last_seen)")
     
     # Insert default admin user if not exists
     cursor.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,))

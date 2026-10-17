@@ -15,3 +15,15 @@ def get_activity_logs(limit: int = Query(50, ge=1, le=500)):
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+@router.delete("")
+def clear_activity_logs():
+    """
+    Clears all recorded activity logs.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM activity_logs")
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "message": "Activity logs cleared"}

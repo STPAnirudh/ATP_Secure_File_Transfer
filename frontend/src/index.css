@@ -14,6 +14,7 @@
     background-color: #060612;
     color: #ffffff;
     font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 }
 
@@ -30,6 +31,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   will-change: transform;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 @media (max-width: 640px) {
@@ -65,4 +67,117 @@
 
 .font-editorial {
   font-family: 'Caveat', cursive;
+}
+
+/* ==========================================================================
+   LIGHT MODE PALETTE & OVERRIDES (Clean, Modern, High Contrast)
+   ========================================================================== */
+html.light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.light .bg-agnos-dark {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .agnos-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important;
+}
+
+html.light .agnos-card-hover:hover {
+  border-color: rgba(255, 99, 33, 0.5) !important;
+  box-shadow: 0 12px 28px -8px rgba(255, 99, 33, 0.12) !important;
+}
+
+/* Navbar & AppShell Light adjustments */
+html.light header {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light footer {
+  background-color: #ffffff !important;
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Headings and primary text in light mode */
+html.light h1,
+html.light h2,
+html.light h3,
+html.light h4 {
+  color: #0f172a !important;
+}
+
+html.light .text-zinc-400 {
+  color: #64748b !important;
+}
+
+html.light .text-zinc-300 {
+  color: #334155 !important;
+}
+
+html.light .text-zinc-500 {
+  color: #94a3b8 !important;
+}
+
+html.light .text-zinc-200 {
+  color: #1e293b !important;
+}
+
+/* Generic borders and glass panels in light mode */
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.1\],
+html.light .border-white\/\[0\.12\],
+html.light .border-white\/\[0\.15\] {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light .bg-white\/\[0\.01\],
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/\[0\.08\] {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Code, terminal blocks, and inputs */
+html.light .bg-black\/40,
+html.light .bg-black\/50,
+html.light .bg-black\/60 {
+  background-color: #f1f5f9 !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+}
+
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html.light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Keep accent buttons text crisp white */
+html.light .bg-agnos-vermilion,
+html.light .bg-emerald-500,
+html.light .bg-rose-500,
+html.light .bg-amber-500 {
+  color: #ffffff !important;
+}
+
+html.light .bg-agnos-vermilion span,
+html.light .bg-emerald-500 span,
+html.light .bg-rose-500 span {
+  color: #ffffff !important;
 }

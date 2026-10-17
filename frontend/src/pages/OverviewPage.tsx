@@ -12,6 +12,12 @@ import {
   Shield,
   Activity,
   ArrowRight,
+  Smartphone,
+  Monitor,
+  Tablet,
+  Edit3,
+  Check,
+  Wifi,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { TransferCard } from '../components/TransferCard';
@@ -19,18 +25,25 @@ import { StatusBadge } from '../components/StatusBadge';
 import { NetworkQrCard } from '../components/NetworkQrCard';
 import { api } from '../services/api';
 import { ServerHealth, Transfer, ActivityLog } from '../types';
+import { useDevice } from '../context/DeviceContext';
+import { formatDateTime, formatTime } from '../utils/date';
 
 export const OverviewPage: React.FC = () => {
+  const { deviceId, deviceName, renameDevice, connectedDevices } = useDevice();
   const [health, setHealth] = useState<ServerHealth | null>(null);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [editingName, setEditingName] = useState(false);
+  const [customNameInput, setCustomNameInput] = useState(deviceName);
+  const [savingName, setSavingName] = useState(false);
+
   const loadData = async () => {
     try {
       const [h, t, a] = await Promise.all([
         api.getHealth().catch(() => null),
-        api.getTransfers().catch(() => []),
+        api.getTransfers('all', deviceId).catch(() => []),
         api.getActivity(6).catch(() => []),
       ]);
       setHealth(h);
@@ -45,7 +58,18 @@ export const OverviewPage: React.FC = () => {
     loadData();
     const interval = setInterval(loadData, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [deviceId]);
+
+  const handleSaveRename = async () => {
+    if (!customNameInput.trim()) return;
+    setSavingName(true);
+    try {
+      await renameDevice(customNameInput.trim());
+      setEditingName(false);
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const handleResume = async (id: string) => {
     try {
@@ -65,6 +89,15 @@ export const OverviewPage: React.FC = () => {
     }
   };
 
+  const handleDeleteTransfer = async (id: string) => {
+    try {
+      await api.deleteTransfer(id);
+      loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   const formatBytes = (bytes: number) => {
     if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
@@ -74,43 +107,48 @@ export const OverviewPage: React.FC = () => {
   };
 
   const activeTransfers = transfers.filter((t) => t.status === 'in_progress');
-  const interruptedTransfers = transfers.filter((t) => t.status === 'interrupted');
   const completedTransfers = transfers.filter((t) => t.status === 'completed');
+  const interruptedTransfers = transfers.filter((t) => t.status === 'interrupted');
+
+  const totalDevicesOnline = Math.max(
+    connectedDevices.length,
+    health?.active_devices_count || 1
+  );
 
   return (
     <AppShell>
-      {/* Top Banner / Heading */}
+      {/* Overview Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <span className="agnos-badge mb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-agnos-vermilion"></span>
-            LOCAL TRANSFER NODE
+            LIVE NETWORK CONTROL PLANE
           </span>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-            Network Overview & Node Status
+            ATP Engine Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             Real-time TCP socket engine status, authenticated session contexts, and active chunk streams.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 self-start sm:self-auto">
           <button
             onClick={() => {
               setLoading(true);
               loadData();
             }}
-            className="p-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.08] transition-colors"
-            title="Refresh Status"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-zinc-300 border border-white/[0.08] transition-colors"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </button>
           <Link
             to="/app/send"
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover shadow-lg shadow-agnos-vermilion/20 transition-all hover:scale-[1.02]"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover shadow-lg shadow-agnos-vermilion/20 transition-all hover:scale-[1.02]"
           >
-            <UploadCloud className="w-4 h-4" />
-            Send New File
+            <UploadCloud className="w-3.5 h-3.5" />
+            Send File
           </Link>
         </div>
       </div>
@@ -129,7 +167,7 @@ export const OverviewPage: React.FC = () => {
             <span className={`w-2 h-2 rounded-full ${health ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
             <span>
               {health
-                ? `${health.active_devices_count || 1} ${(health.active_devices_count || 1) === 1 ? 'device' : 'devices'} online • ${health.tcp_active_connections} active stream${health.tcp_active_connections === 1 ? '' : 's'}`
+                ? `${totalDevicesOnline} ${totalDevicesOnline === 1 ? 'device' : 'devices'} online • ${health.tcp_active_connections} active stream${health.tcp_active_connections === 1 ? '' : 's'}`
                 : 'offline'}
             </span>
           </div>
@@ -170,41 +208,43 @@ export const OverviewPage: React.FC = () => {
             {formatBytes(health?.total_bytes_transferred || 0)}
           </div>
           <div className="text-xs text-zinc-400 font-mono">
-            AES-256-GCM cipher stream
+            AES-256-GCM encrypted
           </div>
         </div>
       </div>
 
-      {/* Main Content Split: Transfers & Activity */}
+      {/* Main Grid: Left Column transfers + Right Column QR & Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Active & Recent Transfers (2 Cols) */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold text-white tracking-tight">Active & Interrupted Transfers</h2>
-              <p className="text-xs text-zinc-400">Streams currently in flight or awaiting resumption</p>
+              <p className="text-xs text-zinc-400">Streams currently running or saved as checkpoint</p>
             </div>
-            <Link to="/app/transfers" className="text-xs text-agnos-vermilion hover:underline flex items-center gap-1">
-              View all ({transfers.length})
+            <Link
+              to="/app/transfers"
+              className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 transition-colors"
+            >
+              <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {activeTransfers.length === 0 && interruptedTransfers.length === 0 ? (
             <div className="agnos-card p-10 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-zinc-400 mb-3">
-                <UploadCloud className="w-6 h-6 text-zinc-400" />
+              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-zinc-500 mb-3">
+                <UploadCloud className="w-6 h-6" />
               </div>
               <h3 className="text-sm font-semibold text-white mb-1">No Active Transfer Streams</h3>
-              <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-5 leading-relaxed">
-                All transfers have completed or the engine is idling. Select a file to test chunked AES-GCM transmission.
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto mb-4">
+                Transfers initiated through the web console or TCP socket client will appear here with live chunk progress.
               </p>
               <Link
                 to="/app/send"
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-white/[0.08] hover:bg-white/[0.15] text-white border border-white/[0.1] transition-all"
               >
-                <UploadCloud className="w-3.5 h-3.5" />
-                Initiate Transfer
+                Start Encrypted Transfer
               </Link>
             </div>
           ) : (
@@ -215,6 +255,7 @@ export const OverviewPage: React.FC = () => {
                   transfer={t}
                   onResume={handleResume}
                   onRetry={handleRetry}
+                  onDelete={handleDeleteTransfer}
                 />
               ))}
             </div>
@@ -222,15 +263,24 @@ export const OverviewPage: React.FC = () => {
 
           {/* Recent Completed Transfers */}
           {completedTransfers.length > 0 && (
-            <div className="mt-8 space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Recently Completed Files
-              </h3>
+            <div className="pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-white tracking-tight">Recent Completed Transmissions</h2>
+                <Link
+                  to="/app/received"
+                  className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
+                >
+                  <span>Open Vault</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+
               <div className="space-y-3">
                 {completedTransfers.slice(0, 3).map((t) => (
                   <TransferCard
                     key={t.id}
                     transfer={t}
+                    onDelete={handleDeleteTransfer}
                   />
                 ))}
               </div>
@@ -238,11 +288,85 @@ export const OverviewPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Column: Mobile Connect QR & Activity Feed (1 Col) */}
+        {/* Right Column: Connected Devices, Mobile Connect QR & Activity Feed (1 Col) */}
         <div className="space-y-6">
+          {/* Connected Devices & Name Card */}
+          <div className="agnos-card p-5 text-xs">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Wifi className="w-4 h-4 text-agnos-vermilion" />
+                <h3 className="font-semibold text-white">Your Device & Peers</h3>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                {totalDevicesOnline} Online
+              </span>
+            </div>
+
+            {/* Rename device box */}
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] mb-3">
+              <div className="text-[10px] uppercase font-mono text-zinc-500 mb-1">
+                Your Device Identity
+              </div>
+              {!editingName ? (
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white truncate max-w-[150px]">{deviceName}</span>
+                  <button
+                    onClick={() => {
+                      setCustomNameInput(deviceName);
+                      setEditingName(true);
+                    }}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] text-[11px] text-zinc-300 transition-colors"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    Rename
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <input
+                    type="text"
+                    value={customNameInput}
+                    onChange={(e) => setCustomNameInput(e.target.value)}
+                    className="flex-1 px-2 py-1 rounded bg-black/60 border border-agnos-vermilion text-xs text-white focus:outline-none"
+                    autoFocus
+                  />
+                  <button
+                    disabled={savingName}
+                    onClick={handleSaveRename}
+                    className="px-2 py-1 rounded bg-agnos-vermilion text-white text-xs font-semibold"
+                  >
+                    <Check className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => setEditingName(false)}
+                    className="px-1.5 py-1 text-xs text-zinc-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Other peers preview */}
+            <div className="space-y-1.5 font-mono text-[11px]">
+              {connectedDevices.slice(0, 3).map((d) => (
+                <div
+                  key={d.device_id}
+                  className="flex items-center justify-between py-1 px-2 rounded bg-white/[0.02] text-zinc-400"
+                >
+                  <span className="truncate max-w-[120px] text-zinc-300">
+                    {d.device_id === deviceId ? `${deviceName} (You)` : d.device_name}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">{d.client_ip}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Network Access QR Code & Address Card */}
           <NetworkQrCard />
 
+          {/* Activity Feed */}
           <div>
             <h2 className="text-base font-semibold text-white tracking-tight">Recent Audit Activity</h2>
             <p className="text-xs text-zinc-400">Cryptographic handshakes and transfer events</p>
@@ -262,7 +386,7 @@ export const OverviewPage: React.FC = () => {
                         {act.event_type}
                       </span>
                       <span className="text-[10px] text-zinc-500">
-                        {new Date(act.timestamp).toLocaleTimeString()}
+                        {formatTime(act.timestamp)}
                       </span>
                     </div>
                     <p className="text-xs text-zinc-300 leading-snug">
@@ -281,36 +405,6 @@ export const OverviewPage: React.FC = () => {
                 <span>View Full Audit Log</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
-            </div>
-          </div>
-
-          {/* Node Parameter Card */}
-          <div className="agnos-card p-5 text-xs">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-4 h-4 text-agnos-vermilion" />
-              <h3 className="font-semibold text-white">Engine Specifications</h3>
-            </div>
-            <div className="space-y-2 font-mono text-[11px] text-zinc-400">
-              <div className="flex justify-between">
-                <span>Protocol:</span>
-                <span className="text-zinc-200">ATP v1.0 (ATP1)</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Chunk Size:</span>
-                <span className="text-zinc-200">65,536 B (64 KB)</span>
-              </div>
-              <div className="flex justify-between">
-                <span>AEAD Cipher:</span>
-                <span className="text-emerald-400">AES-256-GCM</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Key Exchange:</span>
-                <span className="text-cyan-400">X25519 ECDH</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Integrity:</span>
-                <span className="text-zinc-200">SHA-256 Digest</span>
-              </div>
             </div>
           </div>
         </div>

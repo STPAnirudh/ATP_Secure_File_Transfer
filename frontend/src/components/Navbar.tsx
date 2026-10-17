@@ -1,15 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, ArrowRight, Activity, Terminal, QrCode } from 'lucide-react';
+import {
+  Shield,
+  ArrowRight,
+  Terminal,
+  QrCode,
+  Sun,
+  Moon,
+  Smartphone,
+  Wifi,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { ServerHealth } from '../types';
+import { useTheme } from '../context/ThemeContext';
+import { useDevice } from '../context/DeviceContext';
 import { NetworkQrModal } from './NetworkQrModal';
+import { ConnectedDevicesModal } from './ConnectedDevicesModal';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const isApp = location.pathname.startsWith('/app');
   const [health, setHealth] = useState<ServerHealth | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showDevicesModal, setShowDevicesModal] = useState(false);
+
+  const { theme, toggleTheme } = useTheme();
+  const { deviceName, connectedDevices } = useDevice();
 
   useEffect(() => {
     const checkHealth = () => {
@@ -22,11 +38,16 @@ export const Navbar: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const totalDevicesOnline = Math.max(
+    connectedDevices.length,
+    health?.active_devices_count || 1
+  );
+
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-agnos-dark/85 border-b border-white/[0.06]">
+    <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-agnos-dark/85 border-b border-white/[0.06] transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand identity */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-8 h-8 rounded-lg bg-agnos-vermilion flex items-center justify-center text-white shadow-lg shadow-agnos-vermilion/20 group-hover:scale-105 transition-transform">
               <Shield className="w-4 h-4" />
@@ -39,19 +60,23 @@ export const Navbar: React.FC = () => {
             </div>
           </Link>
 
-          {/* Node health status pill */}
-          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs">
+          {/* Node health status pill (Clickable to open Devices Modal) */}
+          <button
+            onClick={() => setShowDevicesModal(true)}
+            className="hidden sm:flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs transition-colors cursor-pointer text-left"
+            title="Click to view connected devices and change your device name"
+          >
             <span className={`w-2 h-2 rounded-full ${health ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
             <span className="text-zinc-300 font-mono">
               TCP :9000 {health ? 'Online' : 'Offline'}
             </span>
             {health && (
-              <span className="text-zinc-400 font-mono text-[11px] pl-1.5 border-l border-white/[0.08]">
-                {health.active_devices_count || 1} {(health.active_devices_count || 1) === 1 ? 'device' : 'devices'} online
-                {health.tcp_active_connections > 0 ? ` • ${health.tcp_active_connections} active stream` : ''}
+              <span className="text-zinc-400 font-mono text-[11px] pl-1.5 border-l border-white/[0.08] flex items-center gap-1">
+                <Wifi className="w-3 h-3 text-emerald-400" />
+                {totalDevicesOnline} {totalDevicesOnline === 1 ? 'device' : 'devices'}
               </span>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Center / Navigation Links */}
@@ -148,7 +173,31 @@ export const Navbar: React.FC = () => {
         </nav>
 
         {/* Right CTA */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Theme Toggle Button (Light / Dark) */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all hover:scale-105"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-indigo-400" />
+            )}
+          </button>
+
+          {/* Connected Devices Trigger Pill */}
+          <button
+            onClick={() => setShowDevicesModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] transition-all"
+            title={`Your device: ${deviceName}. Click to manage name and view online peers.`}
+          >
+            <Smartphone className="w-3.5 h-3.5 text-agnos-vermilion" />
+            <span className="hidden sm:inline max-w-[100px] truncate">{deviceName}</span>
+          </button>
+
           {/* Quick Connect / QR Trigger Button */}
           <button
             onClick={() => setShowQrModal(true)}
@@ -156,13 +205,13 @@ export const Navbar: React.FC = () => {
             title="Scan QR to connect from other devices on Wi-Fi"
           >
             <QrCode className="w-3.5 h-3.5 text-agnos-vermilion" />
-            <span className="hidden sm:inline">Connect</span> Device
+            <span className="hidden md:inline">Connect</span> Device
           </button>
 
           {!isApp ? (
             <Link
               to="/app"
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover shadow-lg shadow-agnos-vermilion/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full text-xs sm:text-sm font-medium bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover shadow-lg shadow-agnos-vermilion/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               Open Console
               <ArrowRight className="w-4 h-4" />
@@ -170,17 +219,11 @@ export const Navbar: React.FC = () => {
           ) : (
             <div className="flex items-center gap-2">
               <Link
-                to="/"
-                className="px-3.5 py-1.5 rounded-full text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors border border-white/[0.08]"
-              >
-                Documentation
-              </Link>
-              <Link
                 to="/app/send"
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover transition-colors shadow-md shadow-agnos-vermilion/20"
+                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover transition-colors shadow-md shadow-agnos-vermilion/20"
               >
                 <Terminal className="w-3.5 h-3.5" />
-                New Transfer
+                <span className="hidden sm:inline">New</span> Transfer
               </Link>
             </div>
           )}
@@ -189,6 +232,13 @@ export const Navbar: React.FC = () => {
 
       {/* Network QR Modal */}
       <NetworkQrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
+
+      {/* Connected Devices Modal */}
+      <ConnectedDevicesModal
+        isOpen={showDevicesModal}
+        onClose={() => setShowDevicesModal(false)}
+        onOpenQr={() => setShowQrModal(true)}
+      />
     </header>
   );
 };

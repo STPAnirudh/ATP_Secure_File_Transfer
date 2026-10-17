@@ -11,15 +11,24 @@ import {
   AlertTriangle,
   ArrowRight,
   Terminal,
+  Radio,
+  Smartphone,
+  Share2,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { ProtocolVisualizer } from '../components/ProtocolVisualizer';
 import { api } from '../services/api';
+import { useDevice } from '../context/DeviceContext';
 
 export const SendPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { deviceId, deviceName, connectedDevices } = useDevice();
+
   const [file, setFile] = useState<File | null>(null);
+  const [targetMode, setTargetMode] = useState<'broadcast' | 'direct'>('broadcast');
+  const [selectedTargetDevice, setSelectedTargetDevice] = useState<string>('broadcast');
+
   const [simulateDrop, setSimulateDrop] = useState(false);
   const [dropAfterChunks, setDropAfterChunks] = useState(3);
   const [uploading, setUploading] = useState(false);
@@ -28,6 +37,9 @@ export const SendPage: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
+
+  // Other online devices (excluding self)
+  const peerDevices = connectedDevices.filter((d) => d.device_id !== deviceId);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -71,7 +83,6 @@ export const SendPage: React.FC = () => {
     setProgress(15);
     setStatusMessage('Initiating TCP Connection with Node :9000...');
 
-    // Progress timer for smooth visual feedback
     const progressTimer = setInterval(() => {
       setProgress((prev) => {
         if (prev < 85) return prev + 10;
@@ -85,6 +96,11 @@ export const SendPage: React.FC = () => {
       if (simulateDrop) {
         formData.append('simulate_drop_after_chunks', dropAfterChunks.toString());
       }
+
+      // Target recipient
+      const finalTarget = targetMode === 'broadcast' ? 'broadcast' : selectedTargetDevice;
+      formData.append('target_device_id', finalTarget);
+      formData.append('sender_device_id', deviceId);
 
       setStatusMessage('Negotiating X25519 Ephemeral Key & Deriving AES-256-GCM Key...');
       setProgress(35);
@@ -182,6 +198,106 @@ export const SendPage: React.FC = () => {
               <span className="agnos-badge">Ready for Wire</span>
             </div>
 
+            {/* Target Delivery Destination (Broadcast vs Direct Device) */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="text-xs font-semibold text-white mb-2 flex items-center gap-2">
+                <Share2 className="w-4 h-4 text-agnos-vermilion" />
+                <span>Delivery Recipient</span>
+              </div>
+              <p className="text-xs text-zinc-400 mb-3">
+                Choose whether this file is public to all network devices or delivered exclusively to a chosen device.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                {/* Broadcast Option */}
+                <label
+                  onClick={() => {
+                    setTargetMode('broadcast');
+                    setSelectedTargetDevice('broadcast');
+                  }}
+                  className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
+                    targetMode === 'broadcast'
+                      ? 'bg-agnos-vermilion/10 border-agnos-vermilion text-white'
+                      : 'bg-white/[0.02] border-white/[0.08] text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="targetMode"
+                    checked={targetMode === 'broadcast'}
+                    onChange={() => {}}
+                    className="text-agnos-vermilion focus:ring-agnos-vermilion"
+                  />
+                  <div>
+                    <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-agnos-vermilion" />
+                      Broadcast on Wi-Fi
+                    </div>
+                    <span className="text-[11px] text-zinc-400">Available to all connected peers</span>
+                  </div>
+                </label>
+
+                {/* Direct to Device Option */}
+                <label
+                  onClick={() => {
+                    setTargetMode('direct');
+                    if (peerDevices.length > 0 && selectedTargetDevice === 'broadcast') {
+                      setSelectedTargetDevice(peerDevices[0].device_id);
+                    }
+                  }}
+                  className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${
+                    targetMode === 'direct'
+                      ? 'bg-agnos-vermilion/10 border-agnos-vermilion text-white'
+                      : 'bg-white/[0.02] border-white/[0.08] text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="targetMode"
+                    checked={targetMode === 'direct'}
+                    onChange={() => {}}
+                    className="text-agnos-vermilion focus:ring-agnos-vermilion"
+                  />
+                  <div>
+                    <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                      Direct to Specific Device
+                    </div>
+                    <span className="text-[11px] text-zinc-400">Restricted solely to selected device</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Direct Device Dropdown */}
+              {targetMode === 'direct' && (
+                <div className="mt-3 p-3 rounded-lg bg-black/40 border border-white/[0.08]">
+                  {peerDevices.length === 0 ? (
+                    <div className="text-xs text-amber-400 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span>No other devices currently active on the network. Connect your phone or second device first, or use Broadcast!</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-[11px] font-mono text-zinc-400 block mb-1.5">
+                        Select Recipient Device:
+                      </label>
+                      <select
+                        value={selectedTargetDevice}
+                        onChange={(e) => setSelectedTargetDevice(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-black/60 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-agnos-vermilion"
+                      >
+                        {peerDevices.map((dev) => (
+                          <option key={dev.device_id} value={dev.device_id}>
+                            {dev.device_name} ({dev.client_ip}) — {dev.device_type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Cryptographic Parameters Confirmation */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
               <div className="p-3 rounded-lg bg-white/[0.02] border border-white/[0.04]">
@@ -234,7 +350,7 @@ export const SendPage: React.FC = () => {
             {/* Action Button */}
             {!completed ? (
               <button
-                disabled={uploading}
+                disabled={uploading || (targetMode === 'direct' && peerDevices.length === 0)}
                 onClick={handleStartTransfer}
                 className="w-full py-3.5 rounded-full text-sm font-semibold bg-agnos-vermilion text-white hover:bg-agnos-vermilion-hover disabled:opacity-50 shadow-lg shadow-agnos-vermilion/20 flex items-center justify-center gap-2 transition-all"
               >

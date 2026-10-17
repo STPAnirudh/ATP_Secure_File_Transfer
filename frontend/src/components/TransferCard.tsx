@@ -1,28 +1,44 @@
 import React from 'react';
 import { Transfer } from '../types';
 import { StatusBadge } from './StatusBadge';
-import { FileText, ArrowUpRight, ArrowDownLeft, RotateCw, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  RotateCw,
+  ExternalLink,
+  Trash2,
+  Radio,
+  Smartphone,
+} from 'lucide-react';
 
 interface Props {
   transfer: Transfer;
   onResume?: (id: string) => void;
   onRetry?: (id: string) => void;
   onSelect?: (transfer: Transfer) => void;
+  onDelete?: (id: string) => void;
 }
 
-export const TransferCard: React.FC<Props> = ({ transfer, onResume, onRetry, onSelect }) => {
+export const TransferCard: React.FC<Props> = ({
+  transfer,
+  onResume,
+  onRetry,
+  onSelect,
+  onDelete,
+}) => {
   const percent = transfer.file_size > 0
     ? Math.min(100, Math.round((transfer.transferred_bytes / transfer.file_size) * 100))
     : 0;
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  const isBroadcast = !transfer.target_device_id || transfer.target_device_id === 'broadcast';
 
   return (
     <div
@@ -39,9 +55,22 @@ export const TransferCard: React.FC<Props> = ({ transfer, onResume, onRetry, onS
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="text-sm font-semibold text-white truncate max-w-xs sm:max-w-md">
-              {transfer.file_name}
-            </h4>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-sm font-semibold text-white truncate max-w-xs sm:max-w-md">
+                {transfer.file_name}
+              </h4>
+              {isBroadcast ? (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono bg-white/[0.05] text-zinc-400">
+                  <Radio className="w-2.5 h-2.5 text-agnos-vermilion" />
+                  Broadcast
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-mono bg-agnos-vermilion/15 text-agnos-vermilion">
+                  <Smartphone className="w-2.5 h-2.5" />
+                  Direct
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono mt-0.5">
               <span>{formatBytes(transfer.file_size)}</span>
               <span>•</span>
@@ -78,6 +107,19 @@ export const TransferCard: React.FC<Props> = ({ transfer, onResume, onRetry, onS
             >
               <RotateCw className="w-3 h-3" />
               Retry
+            </button>
+          )}
+
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(transfer.id);
+              }}
+              className="p-1.5 rounded-full text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+              title="Delete transfer record"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>

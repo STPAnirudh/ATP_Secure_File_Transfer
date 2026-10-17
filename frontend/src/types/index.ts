@@ -14,6 +14,8 @@ export interface Transfer {
   client_ip?: string;
   session_key_fingerprint?: string;
   error_message?: string;
+  target_device_id?: string;
+  sender_device_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -69,8 +71,18 @@ export interface ReceivedFile {
   size: number;
   transfer_id: string;
   sha256_hash: string;
+  target_device_id?: string;
+  sender_device_id?: string;
   verified: boolean;
   received_at: string;
+}
+
+export interface ConnectedDevice {
+  device_id: string;
+  device_name: string;
+  device_type: 'desktop' | 'mobile' | 'tablet';
+  client_ip: string;
+  last_seen: string;
 }
 
 export interface ServerHealth {

@@ -37,11 +37,21 @@ class StorageManager:
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT OR REPLACE INTO transfers (
+            INSERT INTO transfers (
                 id, file_name, file_size, total_chunks, transferred_bytes,
                 completed_chunks, sha256_hash, status, direction, client_ip,
                 session_key_fingerprint, updated_at
             ) VALUES (?, ?, ?, ?, 0, 0, ?, 'in_progress', 'upload', ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(id) DO UPDATE SET
+                file_name = excluded.file_name,
+                file_size = excluded.file_size,
+                total_chunks = excluded.total_chunks,
+                sha256_hash = excluded.sha256_hash,
+                status = excluded.status,
+                direction = excluded.direction,
+                client_ip = excluded.client_ip,
+                session_key_fingerprint = excluded.session_key_fingerprint,
+                updated_at = CURRENT_TIMESTAMP
         """, (transfer_id, filename, file_size, total_chunks, sha256_hash, client_ip, session_key_fingerprint))
         conn.commit()
         conn.close()

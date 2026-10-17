@@ -13,24 +13,32 @@ import {
   X,
   Layers,
   ShieldCheck,
+  Trash2,
+  Radio,
+  Smartphone,
+  AlertCircle,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
 import { TransferCard } from '../components/TransferCard';
 import { StatusBadge } from '../components/StatusBadge';
 import { api } from '../services/api';
-import { Transfer, TransferDetail, TransferStatus } from '../types';
+import { Transfer, TransferDetail } from '../types';
+import { useDevice } from '../context/DeviceContext';
+import { formatDateTime } from '../utils/date';
 
 export const TransfersPage: React.FC = () => {
+  const { deviceId } = useDevice();
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedTransfer, setSelectedTransfer] = useState<TransferDetail | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const loadTransfers = async () => {
     try {
-      const data = await api.getTransfers();
+      const data = await api.getTransfers(statusFilter, deviceId);
       setTransfers(data);
     } catch (err) {
       console.error(err);
@@ -41,7 +49,7 @@ export const TransfersPage: React.FC = () => {
     loadTransfers();
     const interval = setInterval(loadTransfers, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [statusFilter, deviceId]);
 
   const handleSelectTransfer = async (transfer: Transfer) => {
     setLoadingDetails(true);
@@ -70,6 +78,33 @@ export const TransfersPage: React.FC = () => {
       loadTransfers();
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  const handleDeleteTransfer = async (id: string) => {
+    if (!window.confirm('Delete this transfer log from history?')) return;
+    try {
+      await api.deleteTransfer(id);
+      setTransfers((prev) => prev.filter((t) => t.id !== id));
+      if (selectedTransfer?.id === id) setSelectedTransfer(null);
+      setActionMessage('Transfer record deleted');
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err: any) {
+      alert(`Delete failed: ${err.message}`);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (transfers.length === 0) return;
+    if (!window.confirm('Clear all transfer records from history?')) return;
+    try {
+      await api.clearAllTransfers();
+      setTransfers([]);
+      setSelectedTransfer(null);
+      setActionMessage('All transfer records cleared');
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err: any) {
+      alert(`Failed to clear: ${err.message}`);
     }
   };
 
@@ -109,17 +144,36 @@ export const TransfersPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setRefreshing(true);
-            loadTransfers().finally(() => setRefreshing(false));
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-zinc-300 border border-white/[0.08] transition-colors self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh Streams
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {transfers.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-xs font-medium text-rose-400 border border-rose-500/20 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear History
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              setRefreshing(true);
+              loadTransfers().finally(() => setRefreshing(false));
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-zinc-300 border border-white/[0.08] transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh Streams
+          </button>
+        </div>
       </div>
+
+      {actionMessage && (
+        <div className="mb-6 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          <span>{actionMessage}</span>
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
@@ -158,33 +212,34 @@ export const TransfersPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Transfers List */}
+      {/* Transfers Grid */}
       {filteredTransfers.length === 0 ? (
         <div className="agnos-card p-12 text-center">
-          <Layers className="w-8 h-8 text-zinc-500 mx-auto mb-3" />
-          <h3 className="text-sm font-semibold text-white mb-1">No Transfers Match Your Filters</h3>
+          <Layers className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
+          <h3 className="text-sm font-semibold text-white mb-1">No Transfers Match Your Filter</h3>
           <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-            Try adjusting your search query or status filter to see recorded transfers.
+            Try adjusting your search query, status filters, or start a new encrypted transfer.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredTransfers.map((t) => (
+          {filteredTransfers.map((transfer) => (
             <TransferCard
-              key={t.id}
-              transfer={t}
+              key={transfer.id}
+              transfer={transfer}
               onResume={handleResume}
               onRetry={handleRetry}
               onSelect={handleSelectTransfer}
+              onDelete={handleDeleteTransfer}
             />
           ))}
         </div>
       )}
 
-      {/* Transfer Details Modal */}
+      {/* Transfer Detail Inspection Modal */}
       {selectedTransfer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="agnos-card w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 relative border border-white/[0.15]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl agnos-card p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-2xl border border-white/[0.1]">
             <button
               onClick={() => setSelectedTransfer(null)}
               className="absolute top-5 right-5 p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/[0.1] transition-colors"
@@ -222,12 +277,12 @@ export const TransfersPage: React.FC = () => {
                 <span className="text-zinc-200 uppercase">{selectedTransfer.direction}</span>
               </div>
               <div>
-                <span className="text-zinc-500 text-[11px] block">Created</span>
-                <span className="text-zinc-200">{new Date(selectedTransfer.created_at).toLocaleTimeString()}</span>
+                <span className="text-zinc-500 text-[11px] block">Date & Time</span>
+                <span className="text-zinc-200">{formatDateTime(selectedTransfer.created_at)}</span>
               </div>
               <div>
-                <span className="text-zinc-500 text-[11px] block">Client Host</span>
-                <span className="text-zinc-200">{selectedTransfer.client_ip || '127.0.0.1'}</span>
+                <span className="text-zinc-500 text-[11px] block">Target</span>
+                <span className="text-zinc-200">{selectedTransfer.target_device_id || 'broadcast'}</span>
               </div>
             </div>
 
@@ -243,35 +298,51 @@ export const TransfersPage: React.FC = () => {
             </div>
 
             {/* Chunks Checklist */}
-            <div>
+            <div className="mb-6">
               <div className="flex items-center justify-between text-xs font-semibold text-zinc-300 mb-2">
                 <span>Checkpoint Chunk Verification ({selectedTransfer.chunks?.length || 0} chunks logged)</span>
                 <span className="font-mono text-zinc-500 text-[11px]">64 KB atomic segments</span>
               </div>
 
-              {selectedTransfer.chunks && selectedTransfer.chunks.length > 0 ? (
-                <div className="max-h-52 overflow-y-auto space-y-1.5 font-mono text-xs pr-1">
-                  {selectedTransfer.chunks.map((chk) => (
+              <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl bg-black/30 p-2 border border-white/[0.04]">
+                {(!selectedTransfer.chunks || selectedTransfer.chunks.length === 0) ? (
+                  <div className="text-center py-6 text-xs text-zinc-500">
+                    No individual chunk records logged for this transfer.
+                  </div>
+                ) : (
+                  selectedTransfer.chunks.map((c) => (
                     <div
-                      key={chk.chunk_index}
-                      className="flex items-center justify-between p-2 rounded bg-white/[0.02] border border-white/[0.04]"
+                      key={c.chunk_index}
+                      className="flex items-center justify-between py-1.5 px-3 rounded bg-white/[0.02] text-[11px] font-mono"
                     >
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Chunk #{chk.chunk_index}</span>
-                        <span className="text-zinc-500 text-[11px]">offset: {chk.byte_offset}</span>
+                        <span className="text-zinc-300">Chunk #{c.chunk_index}</span>
+                        <span className="text-zinc-500">Offset: {c.byte_offset} B</span>
                       </div>
-                      <span className="text-zinc-400 text-[11px]">{formatBytes(chk.chunk_size)}</span>
+                      <span className="text-emerald-400 text-[10px]">VERIFIED (AEAD)</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 rounded bg-white/[0.02] text-center text-xs text-zinc-500">
-                  {selectedTransfer.status === 'in_progress'
-                    ? 'Recording chunks in flight...'
-                    : 'All chunks committed to destination file.'}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-white/[0.08]">
+              <button
+                onClick={() => handleDeleteTransfer(selectedTransfer.id)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Record
+              </button>
+
+              <button
+                onClick={() => setSelectedTransfer(null)}
+                className="px-5 py-2 rounded-full text-xs font-medium bg-white/[0.08] hover:bg-white/[0.15] text-white transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

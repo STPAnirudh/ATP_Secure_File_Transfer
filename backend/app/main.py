@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from backend.app.config import HTTP_HOST, HTTP_PORT, TCP_HOST, TCP_PORT, BASE_DIR, LOCAL_LAN_IP
 from backend.app.database import init_db, get_db
 from backend.app.tcp_engine.server import TcpTransferServer
-from backend.app.routers import transfers, files, activity, security, settings
+from backend.app.routers import transfers, files, activity, security, settings, devices
 
 START_TIME = time.time()
 tcp_server_instance: TcpTransferServer | None = None
@@ -80,6 +80,7 @@ app.include_router(files.router, prefix="/api")
 app.include_router(activity.router, prefix="/api")
 app.include_router(security.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
+app.include_router(devices.router, prefix="/api")
 
 @app.get("/api/health")
 def get_health(request: Request):
