@@ -1,4 +1,5 @@
 import os
+import socket
 from pathlib import Path
 
 # Base directories
@@ -13,10 +14,26 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 RECEIVED_DIR.mkdir(parents=True, exist_ok=True)
 
-# Network settings
-HTTP_HOST = os.getenv("ATP_HTTP_HOST", "127.0.0.1")
+def get_lan_ip() -> str:
+    """Discovers the primary local LAN IP address of this machine."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except Exception:
+            return "127.0.0.1"
+
+LOCAL_LAN_IP = get_lan_ip()
+
+# Network settings - bind 0.0.0.0 so all LAN devices can connect
+HTTP_HOST = os.getenv("ATP_HTTP_HOST", "0.0.0.0")
 HTTP_PORT = int(os.getenv("ATP_HTTP_PORT", "8000"))
-TCP_HOST = os.getenv("ATP_TCP_HOST", "127.0.0.1")
+TCP_HOST = os.getenv("ATP_TCP_HOST", "0.0.0.0")
 TCP_PORT = int(os.getenv("ATP_TCP_PORT", "9000"))
 
 # Protocol engine settings

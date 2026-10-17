@@ -45,23 +45,20 @@ Inspired closely by the visual language of the [Agnos Design Studio](https://agn
 - Python 3.11+
 - Node.js 20+
 
-### 3.2 Running the Application
-The FastAPI backend automatically starts both the HTTP control API (Port 8000) and the background TCP transfer engine (Port 9000), while serving the built frontend SPA:
+### 3.2 Running the Application (Single Command)
+Run everything—the HTTP Control API, built React Frontend SPA, SQLite WAL database, and Background TCP Transfer Engine (:9000)—with a single command:
 
 ```powershell
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+python start.py
 ```
 
-Open your browser to:
-- **Web Application Console**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- **Interactive API Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+`start.py` automatically detects your local network IP (e.g., `192.168.1.101`), binds to `0.0.0.0`, ensures the frontend bundle is built, and outputs an interactive launch banner:
 
-### 3.3 Running Frontend in Development Mode (Optional)
-If you wish to make live modifications to the frontend:
-```powershell
-python run_npm.py --prefix frontend run dev
-```
-Visit `http://localhost:5173`.
+- **Local Machine Web Console**: [http://localhost:8000](http://localhost:8000)
+- **Cross-Device Mobile / LAN Access**: `http://<your-lan-ip>:8000` (e.g. [http://192.168.1.101:8000](http://192.168.1.101:8000))
+- **Live QR Code**: Displayed on the website header and overview dashboard—scan with your phone's camera on the same Wi-Fi to connect instantly.
+- **TCP Transfer Engine**: Port 9000 (0.0.0.0:9000)
+- **Interactive Swagger API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 

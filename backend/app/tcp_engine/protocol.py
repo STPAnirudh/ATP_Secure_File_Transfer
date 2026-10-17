@@ -22,6 +22,8 @@ class MsgType(IntEnum):
     ERROR = 12
     PING = 13
     PONG = 14
+    DOWNLOAD_INIT = 15
+    DOWNLOAD_ACK = 16
 
 class ProtocolError(Exception):
     pass

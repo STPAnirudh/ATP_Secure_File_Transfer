@@ -68,8 +68,16 @@ export const SendPage: React.FC = () => {
 
     setUploading(true);
     setError(null);
-    setProgress(10);
-    setStatusMessage('Initiating TCP Handshake with Node :9000...');
+    setProgress(15);
+    setStatusMessage('Initiating TCP Connection with Node :9000...');
+
+    // Progress timer for smooth visual feedback
+    const progressTimer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev < 85) return prev + 10;
+        return prev;
+      });
+    }, 200);
 
     try {
       const formData = new FormData();
@@ -79,9 +87,10 @@ export const SendPage: React.FC = () => {
       }
 
       setStatusMessage('Negotiating X25519 Ephemeral Key & Deriving AES-256-GCM Key...');
-      setProgress(25);
+      setProgress(35);
 
       const res = await api.initiateTransfer(formData);
+      clearInterval(progressTimer);
       setTransferId(res.transfer_id);
 
       if (res.interrupted) {
@@ -97,7 +106,13 @@ export const SendPage: React.FC = () => {
         setUploading(false);
       }
     } catch (err: any) {
-      setError(err.message || 'Transfer failed');
+      clearInterval(progressTimer);
+      let errMsg = err.message || 'Transfer failed';
+      try {
+        const parsed = JSON.parse(errMsg);
+        if (parsed.detail) errMsg = parsed.detail;
+      } catch {}
+      setError(errMsg);
       setUploading(false);
     }
   };

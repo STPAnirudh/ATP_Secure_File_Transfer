@@ -1,5 +1,6 @@
 import os
 import shutil
+import asyncio
 from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
@@ -51,6 +52,7 @@ async def send_file_via_tcp(
     """
     Saves uploaded file to temp staging and triggers the real TCP client
     to transmit it chunk-by-chunk to the TCP server over port 9000.
+    Executed in a worker thread so the main asyncio event loop remains non-blocking.
     """
     # 1. Save uploaded file to staging
     staging_dir = DATA_DIR / "staging"
@@ -58,13 +60,17 @@ async def send_file_via_tcp(
     clean_filename = os.path.basename(file.filename or "uploaded_file.bin")
     staged_path = staging_dir / clean_filename
 
-    with open(staged_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    # Write file asynchronously to avoid event loop blocking
+    def _save_file():
+        with open(staged_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    await asyncio.to_thread(_save_file)
 
-    # 2. Trigger real TCP transfer client
+    # 2. Trigger real TCP transfer client in threadpool
     client = TcpTransferClient(host="127.0.0.1", port=TCP_PORT)
     try:
-        result = client.send_file(
+        result = await asyncio.to_thread(
+            client.send_file,
             filepath=str(staged_path),
             simulate_drop_after_chunks=simulate_drop_after_chunks
         )
@@ -73,7 +79,7 @@ async def send_file_via_tcp(
         raise HTTPException(status_code=500, detail=f"TCP Transmission Error: {str(e)}")
 
 @router.post("/{transfer_id}/resume")
-def resume_transfer(transfer_id: str):
+async def resume_transfer(transfer_id: str):
     """
     Triggers resumption for an interrupted transfer.
     Uses staged or source file to continue TCP chunk streaming from the verified checkpoint.
@@ -99,7 +105,8 @@ def resume_transfer(transfer_id: str):
 
     client = TcpTransferClient(host="127.0.0.1", port=TCP_PORT)
     try:
-        result = client.resume_transfer(
+        result = await asyncio.to_thread(
+            client.resume_transfer,
             filepath=str(staged_path),
             transfer_id=transfer_id
         )
@@ -108,5 +115,31 @@ def resume_transfer(transfer_id: str):
         raise HTTPException(status_code=500, detail=f"Resume failed: {str(e)}")
 
 @router.post("/{transfer_id}/retry")
-def retry_transfer(transfer_id: str):
-    return resume_transfer(transfer_id)
+async def retry_transfer(transfer_id: str):
+    return await resume_transfer(transfer_id)
+
+@router.post("/download-tcp")
+async def download_file_via_tcp(filename: str = Query(...)):
+    """
+    Triggers an end-to-end TCP download of a vault file via the TCP client over port 9000,
+    validating AEAD tags on all chunks and the final SHA-256 digest.
+    """
+    staging_downloads = DATA_DIR / "client_downloads"
+    staging_downloads.mkdir(parents=True, exist_ok=True)
+    clean_name = os.path.basename(filename)
+    dest_file = staging_downloads / f"tcp_downloaded_{clean_name}"
+
+    client = TcpTransferClient(host="127.0.0.1", port=TCP_PORT)
+    try:
+        result = await asyncio.to_thread(
+            client.download_file,
+            remote_filename=clean_name,
+            output_filepath=str(dest_file)
+        )
+        return {
+            "message": "TCP Download succeeded with verified AEAD and SHA-256",
+            "result": result,
+            "saved_to": str(dest_file)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TCP Download failed: {str(e)}")

@@ -79,9 +79,22 @@ export interface ServerHealth {
   uptime_seconds: number;
   tcp_port: number;
   tcp_active_connections: number;
+  active_devices_count?: number;
   active_transfers_count: number;
   completed_transfers_count: number;
   interrupted_transfers_count: number;
   total_bytes_transferred: number;
   database_status: string;
+  local_ip?: string;
+  network_url?: string;
+}
+
+export interface NetworkInfo {
+  local_ip: string;
+  http_host: string;
+  http_port: number;
+  tcp_host: string;
+  tcp_port: number;
+  network_url: string;
+  local_url: string;
 }

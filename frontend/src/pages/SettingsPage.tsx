@@ -10,6 +10,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { AppShell } from '../components/AppShell';
+import { NetworkQrCard } from '../components/NetworkQrCard';
 import { api } from '../services/api';
 
 export const SettingsPage: React.FC = () => {
@@ -64,6 +65,11 @@ export const SettingsPage: React.FC = () => {
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             Configure TCP socket parameters, buffer sizes, concurrency limits, and local vault directories.
           </p>
+        </div>
+
+        {/* Cross-Device Access QR Card */}
+        <div className="mb-6">
+          <NetworkQrCard />
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">

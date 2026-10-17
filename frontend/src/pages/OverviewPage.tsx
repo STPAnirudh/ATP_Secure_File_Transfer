@@ -16,6 +16,7 @@ import {
 import { AppShell } from '../components/AppShell';
 import { TransferCard } from '../components/TransferCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { NetworkQrCard } from '../components/NetworkQrCard';
 import { api } from '../services/api';
 import { ServerHealth, Transfer, ActivityLog } from '../types';
 
@@ -126,7 +127,11 @@ export const OverviewPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
             <span className={`w-2 h-2 rounded-full ${health ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-            <span>{health ? `${health.tcp_active_connections} active TCP sessions` : 'offline'}</span>
+            <span>
+              {health
+                ? `${health.active_devices_count || 1} ${(health.active_devices_count || 1) === 1 ? 'device' : 'devices'} online • ${health.tcp_active_connections} active stream${health.tcp_active_connections === 1 ? '' : 's'}`
+                : 'offline'}
+            </span>
           </div>
         </div>
 
@@ -233,8 +238,11 @@ export const OverviewPage: React.FC = () => {
           )}
         </div>
 
-        {/* Right Column: Activity Feed & Quick Actions (1 Col) */}
+        {/* Right Column: Mobile Connect QR & Activity Feed (1 Col) */}
         <div className="space-y-6">
+          {/* Network Access QR Code & Address Card */}
+          <NetworkQrCard />
+
           <div>
             <h2 className="text-base font-semibold text-white tracking-tight">Recent Audit Activity</h2>
             <p className="text-xs text-zinc-400">Cryptographic handshakes and transfer events</p>

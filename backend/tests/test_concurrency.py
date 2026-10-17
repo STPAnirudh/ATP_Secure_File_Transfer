@@ -29,6 +29,11 @@ def concurrent_server():
 
     yield server
 
+    fut = asyncio.run_coroutine_threadsafe(server.stop(), loop)
+    try:
+        fut.result(timeout=2.0)
+    except Exception:
+        pass
     loop.call_soon_threadsafe(loop.stop)
     t.join(timeout=2.0)
 

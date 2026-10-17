@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Shield, ArrowRight, Activity, Terminal } from 'lucide-react';
+import { Shield, ArrowRight, Activity, Terminal, QrCode } from 'lucide-react';
 import { api } from '../services/api';
 import { ServerHealth } from '../types';
+import { NetworkQrModal } from './NetworkQrModal';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const isApp = location.pathname.startsWith('/app');
   const [health, setHealth] = useState<ServerHealth | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
 
   useEffect(() => {
     const checkHealth = () => {
@@ -38,11 +40,17 @@ export const Navbar: React.FC = () => {
           </Link>
 
           {/* Node health status pill */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs">
+          <div className="hidden sm:flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs">
             <span className={`w-2 h-2 rounded-full ${health ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
             <span className="text-zinc-300 font-mono">
-              TCP :9000 {health ? `• ${health.tcp_active_connections} active` : '• offline'}
+              TCP :9000 {health ? 'Online' : 'Offline'}
             </span>
+            {health && (
+              <span className="text-zinc-400 font-mono text-[11px] pl-1.5 border-l border-white/[0.08]">
+                {health.active_devices_count || 1} {(health.active_devices_count || 1) === 1 ? 'device' : 'devices'} online
+                {health.tcp_active_connections > 0 ? ` • ${health.tcp_active_connections} active stream` : ''}
+              </span>
+            )}
           </div>
         </div>
 
@@ -59,9 +67,9 @@ export const Navbar: React.FC = () => {
               <a href="#workflow" className="px-3 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">
                 Architecture
               </a>
-              <a href="#security" className="px-3 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">
+              <Link to="/app/security" className="px-3 py-1.5 rounded-full text-zinc-300 hover:text-white hover:bg-white/[0.05] transition-colors">
                 Cryptography
-              </a>
+              </Link>
             </>
           ) : (
             <>
@@ -141,6 +149,16 @@ export const Navbar: React.FC = () => {
 
         {/* Right CTA */}
         <div className="flex items-center gap-3">
+          {/* Quick Connect / QR Trigger Button */}
+          <button
+            onClick={() => setShowQrModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-zinc-300 hover:text-white bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] transition-all hover:scale-105"
+            title="Scan QR to connect from other devices on Wi-Fi"
+          >
+            <QrCode className="w-3.5 h-3.5 text-agnos-vermilion" />
+            <span className="hidden sm:inline">Connect</span> Device
+          </button>
+
           {!isApp ? (
             <Link
               to="/app"
@@ -168,6 +186,9 @@ export const Navbar: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Network QR Modal */}
+      <NetworkQrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
     </header>
   );
 };

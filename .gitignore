@@ -21,6 +21,8 @@ frontend/.vite/
 data/*.db
 data/uploads/*
 data/staging/*
+data/received/*
+data/client_downloads/*
 !data/received/.gitkeep
 !data/uploads/.gitkeep
 

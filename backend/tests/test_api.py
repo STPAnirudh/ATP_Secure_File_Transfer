@@ -54,3 +54,13 @@ def test_path_traversal_blocked(client):
     res = client.get("/api/files/..etc/download")
     assert res.status_code == 403
 
+def test_network_info_endpoint(client):
+    """Verify that network-info exposes LAN IP and cross-device access URL."""
+    res = client.get("/api/network-info")
+    assert res.status_code == 200
+    data = res.json()
+    assert "local_ip" in data
+    assert "network_url" in data
+    assert "tcp_port" in data
+    assert data["tcp_port"] == 9000
+

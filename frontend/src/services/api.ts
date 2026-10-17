@@ -5,6 +5,7 @@ import {
   ActivityLog,
   SecurityStatus,
   ReceivedFile,
+  NetworkInfo,
 } from '../types';
 
 const API_BASE = '/api';
@@ -36,6 +37,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 export const api = {
   // Health & Overview
   getHealth: () => fetchJson<ServerHealth>('/health'),
+  getNetworkInfo: () => fetchJson<NetworkInfo>('/network-info'),
 
   // Transfers
   getTransfers: (status?: string) => {
@@ -62,7 +64,14 @@ export const api = {
     }).then(async (res) => {
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(errorText || 'Failed to start transfer');
+        let message = `Transfer failed (${res.status})`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.detail) message = parsed.detail;
+        } catch {
+          if (errorText) message = errorText;
+        }
+        throw new Error(message);
       }
       return res.json();
     }),

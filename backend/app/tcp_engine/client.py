@@ -29,6 +29,10 @@ class TcpTransferClient:
         """Establishes TCP connection to the transfer server."""
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.settimeout(30.0)
+        try:
+            self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except Exception:
+            pass
         self.sock.connect((self.host, self.port))
 
     def close(self):
@@ -71,6 +75,17 @@ class TcpTransferClient:
             salt=combined_salt
         )
         return self.session_key
+
+    def authenticate(self, username: str = "admin", password: str = "admin123") -> Dict[str, Any]:
+        """Sends AUTH_REQ and verifies server AUTH_RESP."""
+        if not self.sock or not self.session_key:
+            raise RuntimeError("Must perform handshake prior to authentication")
+        payload = {"username": username, "password": password}
+        self.sock.sendall(ProtocolEngine.pack_json(MsgType.AUTH_REQ, payload))
+        msg_type, body = ProtocolEngine.read_message_sync(self.sock)
+        if msg_type != MsgType.AUTH_RESP:
+            raise ProtocolError(f"Expected AUTH_RESP, got {msg_type}")
+        return json.loads(body.decode("utf-8"))
 
     def send_file(
         self,
@@ -296,4 +311,91 @@ class TcpTransferClient:
             "file_size": file_size,
             "chunks_transmitted": chunks_transmitted,
             "server_response": comp_data
+        }
+
+    def download_file(
+        self,
+        remote_filename: str,
+        output_filepath: str,
+        resume_from_offset: int = 0,
+        on_progress: Optional[Callable[[int, int, float], None]] = None
+    ) -> Dict[str, Any]:
+        """
+        Downloads a file from the server vault over an authenticated AES-256-GCM TCP stream.
+        Validates each chunk's MAC tag and verifies end-to-end SHA-256 digest.
+        """
+        dest_path = Path(output_filepath)
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self.connect()
+        self.perform_handshake()
+
+        # Send DOWNLOAD_INIT
+        req_data = {
+            "filename": remote_filename,
+            "client_offset": resume_from_offset
+        }
+        self.sock.sendall(ProtocolEngine.pack_json(MsgType.DOWNLOAD_INIT, req_data))
+
+        msg_type, body = ProtocolEngine.read_message_sync(self.sock)
+        if msg_type == MsgType.ERROR:
+            err_info = json.loads(body.decode("utf-8"))
+            raise ProtocolError(f"Server rejected download: {err_info.get('error')}")
+        if msg_type != MsgType.DOWNLOAD_ACK:
+            raise ProtocolError(f"Expected DOWNLOAD_ACK, got {msg_type}")
+
+        ack_data = json.loads(body.decode("utf-8"))
+        transfer_id = ack_data["transfer_id"]
+        file_size = ack_data["file_size"]
+        expected_sha256 = ack_data["sha256_hash"]
+        total_chunks = ack_data["total_chunks"]
+
+        bytes_received = resume_from_offset
+        chunks_received = 0
+
+        mode = "r+b" if (dest_path.exists() and resume_from_offset > 0) else "wb"
+        with open(dest_path, mode) as f:
+            if resume_from_offset > 0:
+                f.seek(resume_from_offset)
+
+            while True:
+                msg_type, body = ProtocolEngine.read_message_sync(self.sock)
+                if msg_type == MsgType.COMPLETE:
+                    break
+                elif msg_type == MsgType.ERROR:
+                    err_info = json.loads(body.decode("utf-8"))
+                    raise ProtocolError(f"Download stream error: {err_info.get('error')}")
+                elif msg_type != MsgType.CHUNK_DATA:
+                    raise ProtocolError(f"Expected CHUNK_DATA, got {msg_type}")
+
+                tid, chunk_idx, byte_offset, nonce, tag, ciphertext = ProtocolEngine.unpack_chunk_body(body)
+
+                # Decrypt with AES-256-GCM and verify MAC tag
+                plaintext = CryptographyEngine.decrypt_chunk(self.session_key, nonce, ciphertext, tag)
+                f.write(plaintext)
+                bytes_received += len(plaintext)
+                chunks_received += 1
+
+                # Send CHUNK_ACK
+                ack_body = struct.pack("!IQ", chunk_idx, byte_offset + len(plaintext))
+                self.sock.sendall(ProtocolEngine.pack_message(MsgType.CHUNK_ACK, ack_body))
+
+                if on_progress:
+                    percent = (bytes_received / file_size) * 100 if file_size > 0 else 100.0
+                    on_progress(bytes_received, file_size, percent)
+
+        self.close()
+
+        # Validate final file SHA-256
+        actual_sha256 = CryptographyEngine.compute_sha256_file(str(dest_path))
+        if actual_sha256.lower() != expected_sha256.lower():
+            raise ProtocolError(f"Downloaded file SHA-256 mismatch: {actual_sha256} != {expected_sha256}")
+
+        return {
+            "transfer_id": transfer_id,
+            "status": "completed",
+            "file_size": file_size,
+            "bytes_received": bytes_received,
+            "chunks_received": chunks_received,
+            "sha256": actual_sha256
         }

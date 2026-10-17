@@ -19,6 +19,7 @@ import {
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { ProtocolVisualizer } from '../components/ProtocolVisualizer';
+import { NetworkQrCard } from '../components/NetworkQrCard';
 import { api } from '../services/api';
 import { ServerHealth } from '../types';
 
@@ -37,9 +38,9 @@ export const LandingPage: React.FC = () => {
 
       {/* HERO SECTION */}
       <section className="relative pt-20 pb-28 overflow-hidden">
-        {/* Subtle background ambient lights */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-agnos-vermilion/10 rounded-full blur-[130px] pointer-events-none" />
-        <div className="absolute top-10 right-10 w-72 h-72 bg-blue-500/5 rounded-full blur-[100px] pointer-events-none" />
+        {/* Subtle background ambient lights (optimized for smooth performance) */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-agnos-vermilion/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-10 right-10 w-48 h-48 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
@@ -180,6 +181,11 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Cross-Device Access QR Code */}
+          <div className="mt-12 max-w-xl mx-auto">
+            <NetworkQrCard />
+          </div>
         </div>
       </section>
 
@@ -292,10 +298,19 @@ export const LandingPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Bento Card 1 */}
-            <div className="agnos-card agnos-card-hover p-8 md:col-span-2">
-              <div className="w-12 h-12 rounded-2xl bg-agnos-vermilion/10 border border-agnos-vermilion/20 flex items-center justify-center text-agnos-vermilion mb-6">
-                <Lock className="w-6 h-6" />
+            {/* Bento Card 1 (Cryptography Suite) */}
+            <div id="security" className="agnos-card agnos-card-hover p-8 md:col-span-2">
+              <div className="flex items-center justify-between mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-agnos-vermilion/10 border border-agnos-vermilion/20 flex items-center justify-center text-agnos-vermilion">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <Link
+                  to="/app/security"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-agnos-vermilion bg-agnos-vermilion/10 border border-agnos-vermilion/20 hover:bg-agnos-vermilion/20 transition-colors"
+                >
+                  <span>Open Security Dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
               <h3 className="text-2xl font-bold text-white mb-3">
                 AES-256-GCM Authenticated Encryption

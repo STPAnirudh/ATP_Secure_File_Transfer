@@ -29,6 +29,11 @@ def tcp_server():
 
     yield server
 
+    fut = asyncio.run_coroutine_threadsafe(server.stop(), loop)
+    try:
+        fut.result(timeout=2.0)
+    except Exception:
+        pass
     loop.call_soon_threadsafe(loop.stop)
     t.join(timeout=2.0)
 
@@ -72,3 +77,41 @@ def test_empty_file_transfer(tcp_server, tmp_path):
     dest_path = RECEIVED_DIR / "empty.txt"
     assert dest_path.exists()
     assert dest_path.stat().st_size == 0
+
+def test_tcp_file_download(tcp_server, tmp_path):
+    """
+    Verifies bi-directional TCP communication:
+    Downloads the transferred file back from the server vault over encrypted TCP stream.
+    """
+    download_dest = tmp_path / "downloaded_stream.bin"
+    client = TcpTransferClient(host="127.0.0.1", port=TEST_PORT)
+    result = client.download_file("test_data_stream.bin", str(download_dest))
+
+    assert result["status"] == "completed"
+    assert download_dest.exists()
+    assert result["file_size"] == 150 * 1024
+
+    vault_file = RECEIVED_DIR / "test_data_stream.bin"
+    expected_sha256 = CryptographyEngine.compute_sha256_file(str(vault_file))
+    assert result["sha256"] == expected_sha256
+    assert download_dest.read_bytes() == vault_file.read_bytes()
+
+def test_tcp_authentication(tcp_server):
+    """Verifies TCP socket authentication layer."""
+    client = TcpTransferClient(host="127.0.0.1", port=TEST_PORT)
+    client.connect()
+    client.perform_handshake()
+
+    # Valid admin credentials
+    auth_res = client.authenticate("admin", "admin123")
+    assert auth_res["authenticated"] is True
+    assert auth_res["role"] == "admin"
+    client.close()
+
+    # Invalid credentials
+    client2 = TcpTransferClient(host="127.0.0.1", port=TEST_PORT)
+    client2.connect()
+    client2.perform_handshake()
+    auth_bad = client2.authenticate("admin", "wrongpassword")
+    assert auth_bad["authenticated"] is False
+    client2.close()

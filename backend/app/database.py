@@ -5,8 +5,11 @@ from datetime import datetime
 from backend.app.config import DB_PATH, ADMIN_USERNAME, ADMIN_PASSWORD
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH, timeout=20.0, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA busy_timeout=30000;")
     return conn
 
 def hash_password(password: str) -> str:
@@ -89,6 +92,11 @@ def init_db():
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+
+    # Indices for performance and concurrency
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_tid ON transfer_chunks(transfer_id, chunk_index)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_transfers_status ON transfers(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_transfers_updated ON transfers(updated_at)")
     
     # Insert default admin user if not exists
     cursor.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,))
