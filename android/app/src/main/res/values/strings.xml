@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">ATP Transfer</string>
+    <string name="app_tagline">Agnos Transfer Protocol — Secure Resumable Network</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Overview</string>
+    <string name="nav_connect">Connect</string>
+    <string name="nav_host">Host</string>
+    <string name="nav_transfers">Transfers</string>
+    <string name="nav_vault">Vault</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Notification -->
+    <string name="notification_channel_name">ATP Hosting Service</string>
+    <string name="notification_channel_desc">Keeps the ATP Transfer Engine running in the background.</string>
+    <string name="notification_server_running">ATP Server Active: TCP :9000 • HTTP :8000</string>
+    <string name="action_stop">Stop Server</string>
+</resources>

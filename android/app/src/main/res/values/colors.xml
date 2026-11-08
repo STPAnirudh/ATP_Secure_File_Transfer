@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ATP Brand Colors -->
+    <color name="atp_obsidian">#060612</color>
+    <color name="atp_card">#121226</color>
+    <color name="atp_card_elevated">#1a1a36</color>
+    <color name="atp_card_hover">#222245</color>
+    <color name="atp_border">#262645</color>
+    <color name="atp_border_highlight">#3d3d66</color>
+
+    <color name="atp_vermilion">#ff6321</color>
+    <color name="atp_vermilion_hover">#cf4e17</color>
+    <color name="atp_vermilion_light">#26ff6321</color>
+
+    <color name="atp_emerald">#10b981</color>
+    <color name="atp_emerald_light">#2610b981</color>
+
+    <color name="atp_amber">#f59e0b</color>
+    <color name="atp_amber_light">#26f59e0b</color>
+
+    <color name="atp_rose">#f43f5e</color>
+    <color name="atp_rose_light">#26f43f5e</color>
+
+    <color name="atp_cyan">#06b6d4</color>
+    <color name="atp_cyan_light">#2606b6d4</color>
+
+    <color name="atp_text_primary">#ffffff</color>
+    <color name="atp_text_secondary">#94a3b8</color>
+    <color name="atp_text_muted">#64748b</color>
+
+    <!-- Standard system mapping -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
